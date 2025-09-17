@@ -1,29 +1,32 @@
 package com.sunrizon.horizon.service.impl;
 
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import cn.hutool.core.*;
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.Validator;
+import cn.hutool.core.util.StrUtil;
 
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.sunrizon.horizon.dto.AssignRolesRequest;
 import com.sunrizon.horizon.dto.CreateUserRequest;
-import com.sunrizon.horizon.dto.UpdateUserRequest;
+import com.sunrizon.horizon.dto.LoginUserRequest;
 import com.sunrizon.horizon.enums.UserStatus;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.RoleRepository;
 import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IUserService;
+import com.sunrizon.horizon.utils.JwtUtil;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.vo.AuthVO;
 import com.sunrizon.horizon.vo.UserVO;
 
 import jakarta.annotation.Resource;
@@ -45,6 +48,12 @@ public class UserServiceImpl implements IUserService {
 
   @Resource
   private PasswordEncoder passwordEncoder;
+
+  @Resource
+  private AuthenticationManager authenticationManager;
+
+  @Resource
+  private JwtUtil jwtUtil;
 
   /**
    * Creates a new user in the system.
@@ -104,5 +113,44 @@ public class UserServiceImpl implements IUserService {
 
     // 10. Return success response
     return ResultResponse.success("User created successfully", userVO);
+  }
+
+  /**
+   * Authenticates a user and generates an authorization token.
+   *
+   * Validates the email format and credentials. Retrieves the user's record from
+   * the database, checks status, and issues a JWT authorization token on
+   * successful authentication.
+   *
+   * @param request DTO containing the user's login credentials
+   * @return {@link ResultResponse} containing an {@link AuthVO} with the
+   *         authorization token and user info
+   */
+  @Override
+  public ResultResponse<AuthVO> login(LoginUserRequest request) {
+
+    if (!Validator.isEmail(request.getEmail())) {
+      return ResultResponse.error("Invalid email format");
+    }
+
+    if (StrUtil.isBlank(request.getPassword())) {
+      return ResultResponse.error("Password cannot be empty");
+    }
+
+    Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
+        request.getEmail(), request.getPassword()));
+
+    User user = userRepository.findUserByEmail(request.getEmail())
+        .orElseThrow(() -> new UsernameNotFoundException(
+            "User not found with email: " + request.getEmail()));
+
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    String authorization = jwtUtil.createAuthorization(authentication);
+
+    AuthVO authVO = new AuthVO(authorization, user.getUid(), user.getEmail(),
+        user.getUsername());
+
+    return ResultResponse.success("Login successful", authVO);
   }
 }

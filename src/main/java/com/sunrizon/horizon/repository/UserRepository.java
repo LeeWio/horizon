@@ -18,9 +18,6 @@ public interface UserRepository extends JpaRepository<User, String> {
   // Find a user by username
   Optional<User> findUserByUsername(String username);
 
-  // Find a user by phone number
-  Optional<User> findUserByPhone(String phone);
-
   // Find all users with a specific status
   List<User> findAllByStatus(UserStatus status);
 

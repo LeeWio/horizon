@@ -53,10 +53,10 @@ server:
   port: 8080
 
 # 可选日志配置
-# logging:
-#   level:
-#     root: INFO
-#     org.springframework: DEBUG
+logging:
+  level:
+    root: INFO
+    org.springframework: DEBUG
 
 # 可选 OpenAPI / Swagger 配置
 # springdoc:

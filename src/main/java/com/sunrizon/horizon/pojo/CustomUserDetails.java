@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import com.sunrizon.horizon.enums.UserStatus;
 
 import lombok.AllArgsConstructor;
+import lombok.Data;
 
 import java.util.Collection;
 import java.util.Set;
@@ -17,6 +18,7 @@ import java.util.Set;
  * to Spring Security for authentication and authorization.
  */
 @AllArgsConstructor
+@Data
 public class CustomUserDetails implements UserDetails {
 
   /** The underlying User entity */
