@@ -56,7 +56,7 @@ server:
 logging:
   level:
     root: INFO
-    org.springframework: DEBUG
+    org.springframework: INFO
 
 # 可选 OpenAPI / Swagger 配置
 # springdoc:

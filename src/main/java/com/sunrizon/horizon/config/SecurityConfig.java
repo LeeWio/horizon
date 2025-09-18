@@ -4,18 +4,25 @@ package com.sunrizon.horizon.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import com.sunrizon.horizon.filter.JwtAuthenticationFilter;
+
+import jakarta.annotation.Resource;
 
 /**
  * <p>
@@ -39,6 +46,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableMethodSecurity
 @EnableJpaAuditing
 public class SecurityConfig {
+
+  @Resource
+  private JwtAuthenticationFilter jwtAuthenticationFilter;
 
   /**
    * Password encoder using BCrypt.
@@ -64,6 +74,12 @@ public class SecurityConfig {
   public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration)
       throws Exception {
     return authenticationConfiguration.getAuthenticationManager();
+  }
+
+  @Bean
+  public SecurityContext securityContextHolder() {
+    SecurityContextHolder.setStrategyName(SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
+    return SecurityContextHolder.getContext();
   }
 
   /**
@@ -93,13 +109,19 @@ public class SecurityConfig {
           cors.configurationSource(source);
         })
         .authorizeHttpRequests(auth -> auth
-            // Allow unauthenticated access to login/auth endpoints
+            // Allow unauthenticated access to login endpoint
             .requestMatchers("/api/user/login").permitAll()
-            .requestMatchers("/api/user").permitAll()
+            // Allow unauthenticated access to registration endpoint (optional)
+            .requestMatchers(HttpMethod.POST, "/api/user").permitAll()
             // All other /api/** endpoints require authentication
             .requestMatchers("/api/**").authenticated()
             // Static resources or other requests
             .anyRequest().permitAll());
+
+    http.sessionManagement(session -> session
+        .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+    http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
   }

@@ -25,7 +25,7 @@ public class UserVO {
   private String avatar;
 
   /** Set of role names assigned to the user */
-  private Set<String> roles;
+  private Set<RoleVO> roles;
 
   /** User account status (e.g., ACTIVE, BANNED) */
   private String status;

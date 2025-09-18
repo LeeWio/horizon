@@ -49,8 +49,6 @@ public class ResultResponse<T> {
     this.data = data;
   }
 
-  // -------------------- Static helpers --------------------
-
   /** Success with data and default SUCCESS code */
   public static <T> ResultResponse<T> success(T data) {
     return new ResultResponse<>(ResponseCode.SUCCESS, data);

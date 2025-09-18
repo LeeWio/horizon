@@ -1,7 +1,5 @@
 package com.sunrizon.horizon.service;
 
-import java.util.List;
-
 import com.sunrizon.horizon.dto.*;
 import com.sunrizon.horizon.enums.UserStatus;
 import com.sunrizon.horizon.utils.ResultResponse;
@@ -48,30 +46,7 @@ public interface IUserService {
   // */
   // ResultResponse<UserVO> updateUser(UpdateUserRequest request);
   //
-  // /**
-  // * Deletes a user by their ID (logical deletion recommended).
-  // *
-  // * @param uid the unique ID of the user to delete
-  // * @return {@link ResultResponse} indicating success or failure
-  // */
-  // ResultResponse<Void> deleteUser(String uid);
-  //
-  // /**
-  // * Retrieves a user by their unique ID.
-  // *
-  // * @param uid the user's ID
-  // * @return {@link ResultResponse} containing the {@link UserVO} if found
-  // */
-  // ResultResponse<UserVO> findById(String uid);
-  //
-  // /**
-  // * Retrieves a user by their email.
-  // *
-  // * @param email the user's email address
-  // * @return {@link ResultResponse} containing the {@link UserVO} if found
-  // */
-  // ResultResponse<UserVO> findByEmail(String email);
-  //
+
   // /**
   // * Lists all users, optionally filtered by status.
   // *
@@ -79,27 +54,41 @@ public interface IUserService {
   // * filtering)
   // * @return {@link ResultResponse} containing a list of {@link UserVO}
   // */
-  // ResultResponse<List<UserVO>> listUsers(UserStatus status);
-  //
-  // /**
-  // * Updates the status of a user.
-  // *
-  // * @param uid the user's ID
-  // * @param status the new {@link UserStatus} to set
-  // * @return {@link ResultResponse} indicating success or failure
-  // */
-  // ResultResponse<Void> updateStatus(String uid, UserStatus status);
-  //
-  // /**
-  // * Assigns roles to a user.
-  // *
-  // * Accepts an {@link AssignRolesRequest} DTO containing the user ID and role
-  // * IDs
-  // * to assign.
-  // * Returns a {@link ResultResponse} indicating the success of the operation.
-  // *
-  // * @param request DTO containing user ID and role IDs
-  // * @return {@link ResultResponse} indicating success or failure
-  // */
-  // ResultResponse<Void> assignRoles(AssignRolesRequest request);
+  // ResultResponse<List<UserVO>> getUsers(UserStatus status);
+
+  /**
+   * Retrieves a user by their unique ID.
+   *
+   * This method fetches the user's information from the database using the
+   * provided
+   * unique identifier. If the user exists, their data is wrapped in a
+   * {@link UserVO}
+   * and returned inside a {@link ResultResponse}. If the user does not exist, an
+   * appropriate error message is returned.
+   *
+   * @param uid the unique identifier of the user
+   * @return {@link ResultResponse} containing the {@link UserVO} if found,
+   *         or an error message if not found
+   */
+  ResultResponse<UserVO> getUser(String uid);
+
+  /**
+   * Updates the status of an existing user.
+   *
+   * <p>
+   * This method allows the service layer to change the status of a user account.
+   * For example, a user in {@link UserStatus#PENDING} can be activated or banned,
+   * and a {@link UserStatus#ACTIVE} user can be set to
+   * {@link UserStatus#INACTIVE}
+   * or {@link UserStatus#BANNED}. All status transitions are validated to prevent
+   * illegal changes.
+   * </p>
+   *
+   * @param uid    the unique identifier of the user whose status is being updated
+   * @param status the new {@link UserStatus} to apply to the user
+   * @return a {@link ResultResponse} containing a message indicating the outcome
+   *         of the operation (success or error)
+   */
+  ResultResponse<String> updateStatus(String uid, UserStatus status);
+
 }

@@ -13,6 +13,7 @@ import com.sunrizon.horizon.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 @Table(name = "user")
 @Entity
@@ -53,7 +54,7 @@ public class User implements Serializable {
   private LocalDateTime updatedAt;
 
   /** Roles assigned to this user */
-  @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
-  @JoinTable(name = "user_role", joinColumns = @JoinColumn(name = "user_id", referencedColumnName = "uid"), inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "rid"))
+  @ManyToMany(fetch = FetchType.EAGER, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+  @JoinTable(name = "user_role", joinColumns = @JoinColumn(name = "uid", referencedColumnName = "uid"), inverseJoinColumns = @JoinColumn(name = "rid", referencedColumnName = "rid"))
   private Set<Role> roles;
 }

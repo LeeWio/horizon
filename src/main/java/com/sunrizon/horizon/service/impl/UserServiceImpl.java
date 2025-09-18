@@ -153,4 +153,120 @@ public class UserServiceImpl implements IUserService {
 
     return ResultResponse.success("Login successful", authVO);
   }
+
+  /**
+   * Updates the status of a user account.
+   *
+   * <p>
+   * This method enforces strict state transition rules to prevent illegal
+   * status changes. For example:
+   * <ul>
+   * <li>PENDING → can only become ACTIVE or BANNED</li>
+   * <li>ACTIVE → can only become INACTIVE or BANNED</li>
+   * <li>INACTIVE → can only become ACTIVE or DELETED</li>
+   * <li>BANNED → can only become ACTIVE or DELETED</li>
+   * <li>DELETED → cannot be changed anymore</li>
+   * </ul>
+   * </p>
+   *
+   * <p>
+   * If the status change is valid, the user entity will be updated in the
+   * database. Otherwise, an error response is returned.
+   * </p>
+   *
+   * <p>
+   * This method is transactional, and will roll back on any {@link Exception}.
+   * </p>
+   *
+   * @param uid    Unique ID of the user to update
+   * @param status The new {@link UserStatus} to set
+   * @return {@link ResultResponse} containing success or error message
+   */
+  @Transactional(rollbackFor = Exception.class)
+  @Override
+  public ResultResponse<String> updateStatus(String uid, UserStatus status) {
+
+    User user = userRepository.findById(uid)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with uid: " + uid));
+
+    UserStatus userStatus = user.getStatus();
+
+    if (userStatus == UserStatus.DELETED) {
+      return ResultResponse.error("User has been deleted and cannot be updated.");
+    }
+
+    if (userStatus == status) {
+      return ResultResponse.success("User status is already " + status);
+    }
+
+    switch (userStatus) {
+      case PENDING:
+        if (status == UserStatus.ACTIVE || status == UserStatus.BANNED) {
+          user.setStatus(status);
+        } else {
+          return ResultResponse.error("Pending user can only be activated or banned.");
+        }
+        break;
+
+      case ACTIVE:
+        if (status == UserStatus.INACTIVE || status == UserStatus.BANNED) {
+          user.setStatus(status);
+        } else {
+          return ResultResponse.error("Active user can only be set to inactive or banned.");
+        }
+        break;
+
+      case INACTIVE:
+        if (status == UserStatus.ACTIVE || status == UserStatus.DELETED) {
+          user.setStatus(status);
+        } else {
+          return ResultResponse.error("Inactive user can only be activated or deleted.");
+        }
+        break;
+
+      case BANNED:
+        if (status == UserStatus.ACTIVE || status == UserStatus.DELETED) {
+          user.setStatus(status);
+        } else {
+          return ResultResponse.error("Banned user can only be reactivated or deleted.");
+        }
+        break;
+
+      default:
+        return ResultResponse.error("Invalid user status.");
+    }
+
+    userRepository.saveAndFlush(user);
+
+    return ResultResponse.success("User status updated successfully to " + status);
+  }
+
+  /**
+   * Retrieves a user by their unique ID.
+   *
+   * <p>
+   * Fetches the user from the database using {@link UserRepository#findById}.
+   * If the user exists, maps to {@link UserVO} and returns in
+   * {@link ResultResponse}.
+   * Otherwise, throws {@link UsernameNotFoundException}.
+   * </p>
+   *
+   * @param uid Unique identifier of the user
+   * @return {@link ResultResponse} containing {@link UserVO} or error
+   */
+  @Override
+  public ResultResponse<UserVO> getUser(String uid) {
+
+    if (StrUtil.isBlank(uid)) {
+      return ResultResponse.error("User ID cannot be empty");
+    }
+
+    User user = userRepository.findById(uid)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with uid: " + uid));
+
+    UserVO userVO = BeanUtil.copyProperties(user, UserVO.class);
+
+    return ResultResponse.success(userVO);
+  }
+
 }
