@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sunrizon.horizon.dto.CreateUserRequest;
 import com.sunrizon.horizon.dto.LoginUserRequest;
+import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.enums.UserStatus;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
@@ -71,17 +72,17 @@ public class UserServiceImpl implements IUserService {
 
     // 1. Validate email format
     if (!Validator.isEmail(request.getEmail())) {
-      return ResultResponse.error("Invalid email format");
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "邮箱格式不正确");
     }
 
     // 2. Check if email already exists
     if (userRepository.existsByEmail(request.getEmail())) {
-      return ResultResponse.error("Email already in use");
+      return ResultResponse.error(ResponseCode.USER_EMAIL_EXISTS, "邮箱已存在");
     }
 
     // 3. Check if username already exists
     if (userRepository.existsByUsername(request.getUsername())) {
-      return ResultResponse.error("Username already in use");
+      return ResultResponse.error(ResponseCode.USER_USERNAME_EXISTS, "用户名已存在");
     }
 
     // 4. Map DTO -> Entity safely
@@ -99,7 +100,7 @@ public class UserServiceImpl implements IUserService {
           .stream().collect(Collectors.toSet());
 
       if (roles.size() != request.getRoleIds().size()) {
-        return ResultResponse.error("Some roles do not exist");
+        return ResultResponse.error(ResponseCode.ROLE_NOT_FOUND, "部分角色不存在");
       }
 
       user.setRoles(roles);
@@ -112,7 +113,7 @@ public class UserServiceImpl implements IUserService {
     UserVO userVO = BeanUtil.copyProperties(savedUser, UserVO.class);
 
     // 10. Return success response
-    return ResultResponse.success("User created successfully", userVO);
+    return ResultResponse.success("用户创建成功", userVO);
   }
 
   /**
@@ -129,20 +130,20 @@ public class UserServiceImpl implements IUserService {
   @Override
   public ResultResponse<AuthVO> login(LoginUserRequest request) {
 
-    if (!Validator.isEmail(request.getEmail())) {
-      return ResultResponse.error("Invalid email format");
+    if (!Validator.isEmail(request.getUsername())) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "用户名或邮箱格式不正确");
     }
 
     if (StrUtil.isBlank(request.getPassword())) {
-      return ResultResponse.error("Password cannot be empty");
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "密码不能为空");
     }
 
     Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
-        request.getEmail(), request.getPassword()));
+        request.getUsername(), request.getPassword()));
 
-    User user = userRepository.findUserByEmail(request.getEmail())
+    User user = userRepository.findUserByEmail(request.getUsername())
         .orElseThrow(() -> new UsernameNotFoundException(
-            "User not found with email: " + request.getEmail()));
+            "User not found with email: " + request.getUsername()));
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -151,7 +152,7 @@ public class UserServiceImpl implements IUserService {
     AuthVO authVO = new AuthVO(authorization, user.getUid(), user.getEmail(),
         user.getUsername());
 
-    return ResultResponse.success("Login successful", authVO);
+    return ResultResponse.success("登录成功", authVO);
   }
 
   /**
@@ -192,11 +193,11 @@ public class UserServiceImpl implements IUserService {
     UserStatus userStatus = user.getStatus();
 
     if (userStatus == UserStatus.DELETED) {
-      return ResultResponse.error("User has been deleted and cannot be updated.");
+      return ResultResponse.error(ResponseCode.USER_INVALID_STATUS, "用户已被删除，无法更新状态");
     }
 
     if (userStatus == status) {
-      return ResultResponse.success("User status is already " + status);
+      return ResultResponse.success("用户状态已经是 " + status);
     }
 
     switch (userStatus) {
@@ -204,7 +205,7 @@ public class UserServiceImpl implements IUserService {
         if (status == UserStatus.ACTIVE || status == UserStatus.BANNED) {
           user.setStatus(status);
         } else {
-          return ResultResponse.error("Pending user can only be activated or banned.");
+          return ResultResponse.error(ResponseCode.USER_INVALID_STATUS, "待激活用户只能被激活或封禁");
         }
         break;
 
@@ -212,7 +213,7 @@ public class UserServiceImpl implements IUserService {
         if (status == UserStatus.INACTIVE || status == UserStatus.BANNED) {
           user.setStatus(status);
         } else {
-          return ResultResponse.error("Active user can only be set to inactive or banned.");
+          return ResultResponse.error(ResponseCode.USER_INVALID_STATUS, "激活用户只能被设置为未激活或封禁");
         }
         break;
 
@@ -220,7 +221,7 @@ public class UserServiceImpl implements IUserService {
         if (status == UserStatus.ACTIVE || status == UserStatus.DELETED) {
           user.setStatus(status);
         } else {
-          return ResultResponse.error("Inactive user can only be activated or deleted.");
+          return ResultResponse.error(ResponseCode.USER_INVALID_STATUS, "未激活用户只能被激活或删除");
         }
         break;
 
@@ -228,17 +229,17 @@ public class UserServiceImpl implements IUserService {
         if (status == UserStatus.ACTIVE || status == UserStatus.DELETED) {
           user.setStatus(status);
         } else {
-          return ResultResponse.error("Banned user can only be reactivated or deleted.");
+          return ResultResponse.error(ResponseCode.USER_INVALID_STATUS, "封禁用户只能被重新激活或删除");
         }
         break;
 
       default:
-        return ResultResponse.error("Invalid user status.");
+        return ResultResponse.error(ResponseCode.USER_INVALID_STATUS, "无效的用户状态");
     }
 
     userRepository.saveAndFlush(user);
 
-    return ResultResponse.success("User status updated successfully to " + status);
+    return ResultResponse.success("用户状态更新成功为 " + status);
   }
 
   /**
@@ -258,7 +259,7 @@ public class UserServiceImpl implements IUserService {
   public ResultResponse<UserVO> getUser(String uid) {
 
     if (StrUtil.isBlank(uid)) {
-      return ResultResponse.error("User ID cannot be empty");
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "用户ID不能为空");
     }
 
     User user = userRepository.findById(uid)

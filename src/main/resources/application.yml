@@ -52,18 +52,25 @@ spring:
 server:
   port: 8080
 
-# 可选日志配置
+# 日志配置
 logging:
   level:
     root: INFO
     org.springframework: INFO
 
-# 可选 OpenAPI / Swagger 配置
-# springdoc:
-#   api-docs:
-#     path: /v3/api-docs
-#   swagger-ui:
-#     path: /swagger-ui.html
-#     enabled: true
-#     operationsSorter: method
-#   show-actuat: true
+# OpenAPI / Swagger 配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+  show-actuator: true
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
