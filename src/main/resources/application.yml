@@ -27,7 +27,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create-drop      # 自动建表或更新表结构
+      ddl-auto: update      # 自动建表或更新表结构
     show-sql: true
     open-in-view: true
     properties:

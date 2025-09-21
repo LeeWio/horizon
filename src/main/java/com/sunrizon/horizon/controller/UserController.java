@@ -46,8 +46,7 @@ public class UserController {
   @PostMapping
   @PreAuthorize("hasAuthority('USER_CREATE')")
   public ResultResponse<UserVO> createUser(
-      @Parameter(description = "用户注册信息", required = true)
-      @Valid @RequestBody CreateUserRequest request) {
+      @Parameter(description = "用户注册信息", required = true) @Valid @RequestBody CreateUserRequest request) {
     return userService.createUser(request);
   }
 
@@ -59,16 +58,11 @@ public class UserController {
   })
   @PostMapping("/login")
   public ResultResponse<AuthVO> login(
-      @Parameter(description = "用户登录信息", required = true)
-      @Valid @RequestBody LoginUserRequest request) {
+      @Parameter(description = "用户登录信息", required = true) @Valid @RequestBody LoginUserRequest request) {
     return userService.login(request);
   }
 
-  @Operation(
-      summary = "更新用户状态", 
-      description = "更新指定用户的状态，如激活、禁用、封禁等。需要管理员权限。",
-      security = @SecurityRequirement(name = "Bearer Authentication")
-  )
+  @Operation(summary = "更新用户状态", description = "更新指定用户的状态，如激活、禁用、封禁等。需要管理员权限。", security = @SecurityRequirement(name = "Bearer Authentication"))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "状态更新成功"),
       @ApiResponse(responseCode = "401", description = "未认证或令牌无效"),
@@ -83,11 +77,7 @@ public class UserController {
     return userService.updateStatus(uid, status);
   }
 
-  @Operation(
-      summary = "获取用户信息", 
-      description = "根据用户ID获取用户详细信息。需要认证。",
-      security = @SecurityRequirement(name = "Bearer Authentication")
-  )
+  @Operation(summary = "获取用户信息", description = "根据用户ID获取用户详细信息。需要认证。", security = @SecurityRequirement(name = "Bearer Authentication"))
   @ApiResponses({
       @ApiResponse(responseCode = "200", description = "获取成功"),
       @ApiResponse(responseCode = "401", description = "未认证或令牌无效"),

@@ -31,6 +31,7 @@ import com.sunrizon.horizon.vo.AuthVO;
 import com.sunrizon.horizon.vo.UserVO;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of IUserService.
@@ -39,6 +40,7 @@ import jakarta.annotation.Resource;
  * role assignment, and status changes.
  */
 @Service
+@Slf4j
 public class UserServiceImpl implements IUserService {
 
   @Resource
@@ -73,6 +75,10 @@ public class UserServiceImpl implements IUserService {
     // 1. Validate email format
     if (!Validator.isEmail(request.getEmail())) {
       return ResultResponse.error(ResponseCode.BAD_REQUEST, "邮箱格式不正确");
+    }
+
+    if (StrUtil.isBlank(request.getPassword())) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "密码不能为空");
     }
 
     // 2. Check if email already exists
@@ -130,8 +136,14 @@ public class UserServiceImpl implements IUserService {
   @Override
   public ResultResponse<AuthVO> login(LoginUserRequest request) {
 
-    if (StrUtil.isBlank(request.getUsername())) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST, "用户名或邮箱不能为空");
+    log.error("request: {}", request);
+
+    if (StrUtil.isBlank(request.getEmail())) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "邮箱不能为空");
+    }
+
+    if (!Validator.isEmail(request.getEmail())) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "Invalid email format");
     }
 
     if (StrUtil.isBlank(request.getPassword())) {
@@ -139,19 +151,11 @@ public class UserServiceImpl implements IUserService {
     }
 
     Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
-        request.getUsername(), request.getPassword()));
+        request.getEmail(), request.getPassword()));
 
-    // 根据输入是邮箱还是用户名来查找用户
-    User user;
-    if (Validator.isEmail(request.getUsername())) {
-      user = userRepository.findUserByEmail(request.getUsername())
-          .orElseThrow(() -> new UsernameNotFoundException(
-              "User not found with email: " + request.getUsername()));
-    } else {
-      user = userRepository.findUserByUsername(request.getUsername())
-          .orElseThrow(() -> new UsernameNotFoundException(
-              "User not found with username: " + request.getUsername()));
-    }
+    User user = userRepository.findUserByEmail(request.getEmail())
+        .orElseThrow(() -> new UsernameNotFoundException(
+            "User not found with email: " + request.getEmail()));
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
 

@@ -56,7 +56,6 @@ public class SecurityConfig {
   @Resource
   private CorsConfigurationSource corsConfigurationSource;
 
-
   /**
    * Password encoder using BCrypt.
    *
@@ -112,11 +111,14 @@ public class SecurityConfig {
             // Allow unauthenticated access to registration endpoint (optional)
             .requestMatchers(HttpMethod.POST, "/api/user").permitAll()
             // Allow unauthenticated access to Swagger/OpenAPI endpoints
-            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+            .requestMatchers("/v3/api-docs/**", "/swagger-ui/**",
+                "/swagger-ui.html")
+            .permitAll()
             // Allow unauthenticated access to actuator health endpoint
             .requestMatchers("/actuator/health").permitAll()
             // All other /api/** endpoints require authentication
-            .requestMatchers("/api/**").authenticated()
+            // .requestMatchers("/api/**").authenticated()
+            .requestMatchers("/api/*").permitAll()
             // Static resources or other requests
             .anyRequest().permitAll());
 
