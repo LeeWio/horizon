@@ -34,7 +34,7 @@ public class UserStats implements Serializable {
   @Schema(description = "统计ID")
   private String usid;
 
-  @Column(name = "user_id", nullable = false, length = 36, unique = true)
+  @Column(name = "uid", nullable = false, length = 36, unique = true)
   @Schema(description = "用户ID")
   private String userId;
 
@@ -78,6 +78,6 @@ public class UserStats implements Serializable {
 
   // 关联关系
   @OneToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", insertable = false, updatable = false)
+  @JoinColumn(name = "uid", insertable = false, updatable = false)
   private User user;
 }

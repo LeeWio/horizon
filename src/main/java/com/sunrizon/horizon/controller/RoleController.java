@@ -1,5 +1,6 @@
 package com.sunrizon.horizon.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,6 +45,7 @@ public class RoleController {
       @ApiResponse(responseCode = "409", description = "角色名已存在")
   })
   @PostMapping
+  @PreAuthorize("hasAuthority('ROLE_CREATE')")
   public ResultResponse<RoleVO> createRole(
       @Parameter(description = "角色创建信息", required = true)
       @RequestBody CreateRoleRequest request) {
@@ -79,6 +81,7 @@ public class RoleController {
       @ApiResponse(responseCode = "409", description = "角色正在使用中，无法删除")
   })
   @DeleteMapping("/{rid}")
+  @PreAuthorize("hasAuthority('ROLE_DELETE')")
   public ResultResponse<String> deleteRole(
       @Parameter(description = "角色唯一标识符", required = true) @PathVariable String rid) {
     return roleService.deleteRole(rid);
@@ -97,6 +100,7 @@ public class RoleController {
       @ApiResponse(responseCode = "404", description = "用户或角色不存在")
   })
   @PostMapping("/assign")
+  @PreAuthorize("hasAuthority('ROLE_ASSIGN')")
   public ResultResponse<String> assignRoles(
       @Parameter(description = "角色分配信息", required = true)
       @Valid @RequestBody AssignRolesRequest request) {

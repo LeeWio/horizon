@@ -34,7 +34,7 @@ public class Like implements Serializable {
   @Column(name = "lid", nullable = false, length = 36, updatable = false)
   private String lid;
 
-  @Column(name = "user_id", nullable = false, length = 36)
+  @Column(name = "uid", nullable = false, length = 36)
   private String userId;
 
   @Column(name = "target_id", nullable = false, length = 36)
@@ -50,6 +50,6 @@ public class Like implements Serializable {
 
   // 关联关系
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", insertable = false, updatable = false)
+  @JoinColumn(name = "uid", insertable = false, updatable = false)
   private User user;
 }

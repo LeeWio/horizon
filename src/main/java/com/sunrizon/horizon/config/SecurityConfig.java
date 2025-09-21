@@ -17,10 +17,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import com.sunrizon.horizon.filter.JwtAuthenticationFilter;
+import com.sunrizon.horizon.filter.RateLimitFilter;
 
 import jakarta.annotation.Resource;
 
@@ -49,6 +49,13 @@ public class SecurityConfig {
 
   @Resource
   private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+  @Resource
+  private RateLimitFilter rateLimitFilter;
+
+  @Resource
+  private CorsConfigurationSource corsConfigurationSource;
+
 
   /**
    * Password encoder using BCrypt.
@@ -98,16 +105,7 @@ public class SecurityConfig {
 
     http
         .csrf(AbstractHttpConfigurer::disable)
-        .cors(cors -> {
-          UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-          CorsConfiguration config = new CorsConfiguration();
-          config.addAllowedHeader("*");
-          config.addAllowedMethod("*");
-          config.addAllowedOriginPattern("*"); // TODO: restrict in production
-          config.setAllowCredentials(true);
-          source.registerCorsConfiguration("/**", config);
-          cors.configurationSource(source);
-        })
+        .cors(cors -> cors.configurationSource(corsConfigurationSource))
         .authorizeHttpRequests(auth -> auth
             // Allow unauthenticated access to login endpoint
             .requestMatchers("/api/user/login").permitAll()
@@ -125,6 +123,8 @@ public class SecurityConfig {
     http.sessionManagement(session -> session
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
+    // 添加限流过滤器（在JWT过滤器之前）
+    http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
     http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();

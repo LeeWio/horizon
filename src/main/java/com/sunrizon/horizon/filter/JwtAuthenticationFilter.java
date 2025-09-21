@@ -2,6 +2,7 @@ package com.sunrizon.horizon.filter;
 
 import java.io.IOException;
 
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -22,6 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 
 @Component
+@Order(2)
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -46,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
           userDetails, null, userDetails.getAuthorities());
 
-      // TODO: get ip
+      // 获取客户端IP地址
       WebAuthenticationDetails webAuthenticationDetails = new WebAuthenticationDetailsSource().buildDetails(request);
       usernamePasswordAuthenticationToken.setDetails(webAuthenticationDetails);
 

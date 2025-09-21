@@ -17,6 +17,7 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -47,6 +48,7 @@ public class ArticleController {
         @ApiResponse(responseCode = "409", description = "文章标题或别名已存在")
     })
     @PostMapping
+    @PreAuthorize("hasAuthority('ARTICLE_CREATE')")
     @SecurityRequirement(name = "Bearer Authentication")
     public ResultResponse<ArticleVO> createArticle(
             @Parameter(description = "创建文章请求", required = true)
@@ -70,6 +72,7 @@ public class ArticleController {
         @ApiResponse(responseCode = "409", description = "文章标题或别名已存在")
     })
     @PutMapping("/{aid}")
+    @PreAuthorize("hasAuthority('ARTICLE_UPDATE')")
     @SecurityRequirement(name = "Bearer Authentication")
     public ResultResponse<ArticleVO> updateArticle(
             @Parameter(description = "文章ID", required = true) @PathVariable String aid,
@@ -92,6 +95,7 @@ public class ArticleController {
         @ApiResponse(responseCode = "404", description = "文章不存在")
     })
     @DeleteMapping("/{aid}")
+    @PreAuthorize("hasAuthority('ARTICLE_DELETE')")
     @SecurityRequirement(name = "Bearer Authentication")
     public ResultResponse<String> deleteArticle(
             @Parameter(description = "文章ID", required = true) @PathVariable String aid) {

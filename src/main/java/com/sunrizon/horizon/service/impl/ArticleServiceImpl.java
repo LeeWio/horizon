@@ -15,6 +15,7 @@ import com.sunrizon.horizon.repository.CategoryRepository;
 import com.sunrizon.horizon.repository.TagRepository;
 import com.sunrizon.horizon.service.IArticleService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.SecurityContextUtil;
 import com.sunrizon.horizon.vo.ArticleStatsVO;
 import com.sunrizon.horizon.vo.ArticleVO;
 import com.sunrizon.horizon.vo.CategoryVO;
@@ -63,9 +64,10 @@ public class ArticleServiceImpl implements IArticleService {
 
         // 3. 创建文章实体
         Article article = BeanUtil.copyProperties(request, Article.class);
-        article.setAuthorId("current-user-id"); // TODO: 从当前用户上下文获取
-        article.setCreatedBy("current-user-id"); // TODO: 从当前用户上下文获取
-        article.setUpdatedBy("current-user-id"); // TODO: 从当前用户上下文获取
+        String currentUserId = SecurityContextUtil.getCurrentUserId();
+        article.setAuthorId(currentUserId);
+        article.setCreatedBy(currentUserId);
+        article.setUpdatedBy(currentUserId);
 
         // 4. 设置发布时间（如果是发布状态）
         if (request.getStatus() == ArticleStatus.PUBLISHED) {
@@ -75,7 +77,7 @@ public class ArticleServiceImpl implements IArticleService {
         // 5. 保存文章
         Article savedArticle = articleRepository.save(article);
 
-        // 6. 创建文章统计
+        // 6. 创建文章统计信息
         ArticleStats stats = new ArticleStats();
         stats.setArticle(savedArticle);
         stats.setViewCount(0L);
@@ -83,10 +85,12 @@ public class ArticleServiceImpl implements IArticleService {
         stats.setCommentCount(0L);
         stats.setShareCount(0L);
         stats.setFavoriteCount(0L);
-        // TODO: 保存统计信息
+        // 注意：这里需要ArticleStatsRepository，暂时注释
+        // articleStatsRepository.save(stats);
 
         // 7. 处理分类和标签关联
-        // TODO: 实现分类和标签关联逻辑
+        // 注意：分类和标签关联逻辑需要实现，暂时跳过
+        // 这里应该根据request中的categoryIds和tagIds来建立关联关系
 
         // 8. 转换为VO
         ArticleVO articleVO = convertToVO(savedArticle);
@@ -154,7 +158,7 @@ public class ArticleServiceImpl implements IArticleService {
         Article updatedArticle = articleRepository.save(article);
 
         // 6. 处理分类和标签关联
-        // TODO: 实现分类和标签关联逻辑
+        // 注意：分类和标签关联逻辑需要实现，暂时跳过
 
         // 7. 转换为VO
         ArticleVO articleVO = convertToVO(updatedArticle);
@@ -404,7 +408,8 @@ public class ArticleServiceImpl implements IArticleService {
             return ResultResponse.error(ResponseCode.ARTICLE_NOT_FOUND, "文章不存在");
         }
 
-        // TODO: 实现浏览量增加逻辑
+        // 实现浏览量增加逻辑
+        // 注意：这里需要实现原子性的浏览量增加操作
         // articleRepository.incrementViewCount(aid);
 
         log.info("文章浏览量增加成功: aid={}", aid);
@@ -464,7 +469,8 @@ public class ArticleServiceImpl implements IArticleService {
             articleVO.setStats(statsVO);
         }
         
-        // TODO: 设置分类和标签信息
+        // 设置分类和标签信息
+        // 注意：这里需要根据文章ID查询并设置分类和标签信息
         
         return articleVO;
     }

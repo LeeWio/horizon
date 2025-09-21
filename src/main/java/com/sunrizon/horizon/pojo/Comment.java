@@ -67,7 +67,7 @@ public class Comment implements Serializable {
   @Column(name = "article_id", nullable = false, length = 36)
   private String articleId;
 
-  @Column(name = "user_id", length = 36)
+  @Column(name = "uid", length = 36)
   private String userId; // 注册用户ID，可为空（游客评论）
 
   @Column(name = "parent_id", length = 36)
@@ -87,7 +87,7 @@ public class Comment implements Serializable {
   private Article article;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", insertable = false, updatable = false)
+  @JoinColumn(name = "uid", insertable = false, updatable = false)
   private User user;
 
   @ManyToOne(fetch = FetchType.LAZY)

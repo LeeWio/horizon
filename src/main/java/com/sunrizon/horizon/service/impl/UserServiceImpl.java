@@ -130,8 +130,8 @@ public class UserServiceImpl implements IUserService {
   @Override
   public ResultResponse<AuthVO> login(LoginUserRequest request) {
 
-    if (!Validator.isEmail(request.getUsername())) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST, "用户名或邮箱格式不正确");
+    if (StrUtil.isBlank(request.getUsername())) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "用户名或邮箱不能为空");
     }
 
     if (StrUtil.isBlank(request.getPassword())) {
@@ -141,9 +141,17 @@ public class UserServiceImpl implements IUserService {
     Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
         request.getUsername(), request.getPassword()));
 
-    User user = userRepository.findUserByEmail(request.getUsername())
-        .orElseThrow(() -> new UsernameNotFoundException(
-            "User not found with email: " + request.getUsername()));
+    // 根据输入是邮箱还是用户名来查找用户
+    User user;
+    if (Validator.isEmail(request.getUsername())) {
+      user = userRepository.findUserByEmail(request.getUsername())
+          .orElseThrow(() -> new UsernameNotFoundException(
+              "User not found with email: " + request.getUsername()));
+    } else {
+      user = userRepository.findUserByUsername(request.getUsername())
+          .orElseThrow(() -> new UsernameNotFoundException(
+              "User not found with username: " + request.getUsername()));
+    }
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
 

@@ -1,5 +1,6 @@
 package com.sunrizon.horizon.utils;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 
@@ -24,7 +25,12 @@ public class JwtUtil {
   public static final String CLAIM_EMAIL = "email";
 
   /** Secret key used for signing the JWT tokens (HS256 algorithm). */
-  private static final String SECRET_KEY = "daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb";
+  @Value("${jwt.secret:daf66e01593f61a15b857cf433aae03a005812b31234e149036bcc8dee755dbb}")
+  private String secretKey;
+
+  /** JWT token expiration time in hours */
+  @Value("${jwt.expiration-hours:24}")
+  private int expirationHours;
 
   /**
    * Builds a JWT signer instance using the configured secret key.
@@ -32,7 +38,7 @@ public class JwtUtil {
    * @return {@link JWTSigner} instance configured with HS256 and the secret key
    */
   private JWTSigner getJwtSigner() {
-    return JWTSignerUtil.hs256(SECRET_KEY.getBytes());
+    return JWTSignerUtil.hs256(secretKey.getBytes());
   }
 
   /**
@@ -52,7 +58,7 @@ public class JwtUtil {
   public String createAuthorization(Authentication authentication) {
     return JWT.create()
         .setPayload(CLAIM_EMAIL, authentication.getName())
-        .setExpiresAt(DateUtil.offsetHour(DateUtil.date(), 2))
+        .setExpiresAt(DateUtil.offsetHour(DateUtil.date(), expirationHours))
         .sign(getJwtSigner())
         .toString();
   }

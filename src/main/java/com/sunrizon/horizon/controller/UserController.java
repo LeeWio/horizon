@@ -1,5 +1,6 @@
 package com.sunrizon.horizon.controller;
 
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,7 +44,7 @@ public class UserController {
       @ApiResponse(responseCode = "409", description = "用户名或邮箱已存在")
   })
   @PostMapping
-  // @PreAuthorize("hasAuthority('USER_CREATE')")
+  @PreAuthorize("hasAuthority('USER_CREATE')")
   public ResultResponse<UserVO> createUser(
       @Parameter(description = "用户注册信息", required = true)
       @Valid @RequestBody CreateUserRequest request) {
@@ -75,7 +76,7 @@ public class UserController {
       @ApiResponse(responseCode = "404", description = "用户不存在")
   })
   @PutMapping("/{uid}/status")
-  // @PreAuthorize("hasAuthority('USER_UPDATE_STATUS')")
+  @PreAuthorize("hasAuthority('USER_UPDATE_STATUS')")
   public ResultResponse<String> updateStatus(
       @Parameter(description = "用户唯一标识符", required = true) @PathVariable String uid,
       @Parameter(description = "新的用户状态", required = true) @RequestParam UserStatus status) {

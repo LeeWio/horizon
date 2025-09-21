@@ -1,6 +1,6 @@
 package com.sunrizon.horizon.dto;
 
-import com.sunrizon.horizon.constants.Constants;
+import com.sunrizon.horizon.constants.UserConstants;
 import com.sunrizon.horizon.validation.ValidationGroups;
 
 import jakarta.validation.constraints.Email;
@@ -19,8 +19,8 @@ public class LoginUserRequest {
    * 用户名或邮箱
    */
   @NotBlank(message = "用户名或邮箱不能为空", groups = {ValidationGroups.Login.class})
-  @Size(min = Constants.USERNAME_MIN_LENGTH, max = Constants.EMAIL_MAX_LENGTH,
-        message = "用户名或邮箱长度必须在" + Constants.USERNAME_MIN_LENGTH + "-" + Constants.EMAIL_MAX_LENGTH + "个字符之间",
+  @Size(min = UserConstants.USERNAME_MIN_LENGTH, max = UserConstants.EMAIL_MAX_LENGTH,
+        message = "用户名或邮箱长度必须在" + UserConstants.USERNAME_MIN_LENGTH + "-" + UserConstants.EMAIL_MAX_LENGTH + "个字符之间",
         groups = {ValidationGroups.Login.class})
   private String username;
 
@@ -28,8 +28,8 @@ public class LoginUserRequest {
    * 密码
    */
   @NotBlank(message = "密码不能为空", groups = {ValidationGroups.Login.class})
-  @Size(min = Constants.PASSWORD_MIN_LENGTH, max = Constants.PASSWORD_MAX_LENGTH,
-        message = "密码长度必须在" + Constants.PASSWORD_MIN_LENGTH + "-" + Constants.PASSWORD_MAX_LENGTH + "个字符之间",
+  @Size(min = UserConstants.PASSWORD_MIN_LENGTH, max = UserConstants.PASSWORD_MAX_LENGTH,
+        message = "密码长度必须在" + UserConstants.PASSWORD_MIN_LENGTH + "-" + UserConstants.PASSWORD_MAX_LENGTH + "个字符之间",
         groups = {ValidationGroups.Login.class})
   private String password;
 
