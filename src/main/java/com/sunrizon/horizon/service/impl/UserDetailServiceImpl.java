@@ -15,6 +15,7 @@ import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.UserRepository;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of Spring Security's UserDetailsService.
@@ -25,6 +26,7 @@ import jakarta.annotation.Resource;
  * including roles and permissions.
  */
 @Service
+@Slf4j
 public class UserDetailServiceImpl implements UserDetailsService {
 
   @Resource
@@ -47,6 +49,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
     // Collect authorities from roles and permissions
     Set<GrantedAuthority> authorities = user.getRoles().stream()
         .flatMap(role -> {
+          log.error("role->: {}", role.getPermissions().toString());
           // Map each permission of the role to a SimpleGrantedAuthority
           Set<GrantedAuthority> roleAuthorities = role.getPermissions().stream()
               .map(permission -> new SimpleGrantedAuthority(permission.getName().name()))
@@ -58,6 +61,8 @@ public class UserDetailServiceImpl implements UserDetailsService {
           return roleAuthorities.stream();
         })
         .collect(Collectors.toSet());
+
+    log.error("authorities: {}", authorities.toString());
 
     // Return a CustomUserDetails object for Spring Security
     return new CustomUserDetails(user, authorities);

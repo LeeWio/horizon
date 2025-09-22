@@ -26,6 +26,7 @@ import com.sunrizon.horizon.enums.RoleType;
 @Getter
 @Setter
 @EntityListeners(AuditingEntityListener.class)
+@ToString
 public class Role implements Serializable {
 
   private static final long serialVersionUID = -6249691474254164720L;

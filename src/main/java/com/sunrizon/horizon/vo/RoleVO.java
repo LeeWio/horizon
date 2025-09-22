@@ -2,6 +2,9 @@
 package com.sunrizon.horizon.vo;
 
 import java.time.LocalDateTime;
+import java.util.Set;
+
+import com.sunrizon.horizon.pojo.Permission;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -41,4 +44,6 @@ public class RoleVO {
    * Time when the role was last updated.
    */
   private LocalDateTime updatedAt;
+
+  private Set<Permission> permissions;
 }

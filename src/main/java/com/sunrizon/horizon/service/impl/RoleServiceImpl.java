@@ -8,8 +8,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sunrizon.horizon.dto.AssignRolesRequest;
 import com.sunrizon.horizon.dto.CreateRoleRequest;
+import com.sunrizon.horizon.enums.ResponseCode;
+import com.sunrizon.horizon.pojo.Permission;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
+import com.sunrizon.horizon.repository.PermissionRepository;
 import com.sunrizon.horizon.repository.RoleRepository;
 import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IRoleService;
@@ -39,6 +42,9 @@ public class RoleServiceImpl implements IRoleService {
   @Resource
   private UserRepository userRepository;
 
+  @Resource
+  private PermissionRepository permissionRepository;
+
   /**
    * Creates a new role in the system.
    *
@@ -55,6 +61,17 @@ public class RoleServiceImpl implements IRoleService {
 
     // Convert DTO to Entity
     Role role = BeanUtil.copyProperties(request, Role.class);
+
+    if (request.getPermissionIds() != null && !request.getPermissionIds().isEmpty()) {
+      Set<Permission> permissions = permissionRepository.findAllById(request.getPermissionIds()).stream()
+          .collect(Collectors.toSet());
+
+      if (request.getPermissionIds().size() != permissions.size()) {
+        return ResultResponse.error(ResponseCode.PERMISSION_NOT_FOUND, "部分权限不存在");
+      }
+
+      role.setPermissions(permissions);
+    }
 
     // Save to DB
     Role savedRole = roleRepository.saveAndFlush(role);
