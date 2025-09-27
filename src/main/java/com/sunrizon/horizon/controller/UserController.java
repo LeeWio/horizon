@@ -1,5 +1,8 @@
 package com.sunrizon.horizon.controller;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sunrizon.horizon.dto.CreateUserRequest;
 import com.sunrizon.horizon.dto.LoginUserRequest;
 import com.sunrizon.horizon.enums.UserStatus;
+import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IUserService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.AuthVO;
@@ -75,6 +79,16 @@ public class UserController {
   @GetMapping("/{uid}")
   public ResultResponse<UserVO> getUser(@PathVariable("uid") String uid) {
     return userService.getUser(uid);
+  }
+
+  @DeleteMapping("/{uid}")
+  public ResultResponse<String> deleteUser(@PathVariable("uid") String uid) {
+    return userService.deleteUser(uid);
+  }
+
+  @GetMapping
+  public ResultResponse<Page<UserVO>> getUsers(Pageable pageable) {
+    return userService.getUsers(pageable);
   }
 
 }

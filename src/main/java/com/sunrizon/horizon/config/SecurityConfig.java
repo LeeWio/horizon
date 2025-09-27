@@ -110,11 +110,11 @@ public class SecurityConfig {
         })
         .authorizeHttpRequests(auth -> auth
             // Allow unauthenticated access to login endpoint
-            .requestMatchers("/api/user/login").permitAll()
+            // .requestMatchers("/api/user/login").permitAll()
             // Allow unauthenticated access to registration endpoint (optional)
-            .requestMatchers(HttpMethod.POST, "/api/user").permitAll()
+            // .requestMatchers(HttpMethod.POST, "/api/user").permitAll()
             // All other /api/** endpoints require authentication
-            .requestMatchers("/api/**").authenticated()
+            // .requestMatchers("/api/**").authenticated()
             // Static resources or other requests
             .anyRequest().permitAll());
 

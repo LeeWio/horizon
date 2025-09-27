@@ -1,5 +1,8 @@
 package com.sunrizon.horizon.service;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.sunrizon.horizon.dto.*;
 import com.sunrizon.horizon.enums.UserStatus;
 import com.sunrizon.horizon.utils.ResultResponse;
@@ -9,85 +12,60 @@ import com.sunrizon.horizon.vo.UserVO;
 public interface IUserService {
 
   /**
-   * Creates a new user in the system.
+   * Create a new user.
    *
-   * Accepts a {@link CreateUserRequest} DTO containing necessary user
-   * information.
-   * Returns the newly created user data wrapped in a {@link ResultResponse} for
-   * API consistency.
-   *
-   * @param request DTO containing user creation information
-   * @return {@link ResultResponse} containing the created {@link UserVO}
+   * @param request DTO with user creation info
+   * @return ResultResponse containing the created UserVO
    */
   ResultResponse<UserVO> createUser(CreateUserRequest request);
 
   /**
-   * Authenticates a user based on credentials.
+   * Get a user by ID.
    *
-   * Accepts a {@link LoginUserRequest} DTO containing the user's credentials
-   * Returns a {@link AuthVO} wrapped in a {@link ResultResponse} on successful
-   * authentication
-   *
-   * @param request DTO containing login credentials
-   * @return {@link ResultResponse} containing a {@link AuthVO} if authentication
-   *         succeeds
-   */
-  ResultResponse<AuthVO> login(LoginUserRequest request);
-
-  // /**
-  // * Updates an existing user's information.
-  // *
-  // * Accepts an {@link UpdateUserRequest} DTO containing the updated user
-  // * fields.
-  // * Returns the updated user data wrapped in a {@link ResultResponse}.
-  // *
-  // * @param request DTO containing updated user information
-  // * @return {@link ResultResponse} containing the updated {@link UserVO}
-  // */
-  // ResultResponse<UserVO> updateUser(UpdateUserRequest request);
-  //
-
-  // /**
-  // * Lists all users, optionally filtered by status.
-  // *
-  // * @param status the {@link UserStatus} to filter by (null to ignore
-  // * filtering)
-  // * @return {@link ResultResponse} containing a list of {@link UserVO}
-  // */
-  // ResultResponse<List<UserVO>> getUsers(UserStatus status);
-
-  /**
-   * Retrieves a user by their unique ID.
-   *
-   * This method fetches the user's information from the database using the
-   * provided
-   * unique identifier. If the user exists, their data is wrapped in a
-   * {@link UserVO}
-   * and returned inside a {@link ResultResponse}. If the user does not exist, an
-   * appropriate error message is returned.
-   *
-   * @param uid the unique identifier of the user
-   * @return {@link ResultResponse} containing the {@link UserVO} if found,
-   *         or an error message if not found
+   * @param uid unique user ID
+   * @return ResultResponse containing the UserVO if found
    */
   ResultResponse<UserVO> getUser(String uid);
 
   /**
-   * Updates the status of an existing user.
+   * Get a paginated list of users.
    *
-   * <p>
-   * This method allows the service layer to change the status of a user account.
-   * For example, a user in {@link UserStatus#PENDING} can be activated or banned,
-   * and a {@link UserStatus#ACTIVE} user can be set to
-   * {@link UserStatus#INACTIVE}
-   * or {@link UserStatus#BANNED}. All status transitions are validated to prevent
-   * illegal changes.
-   * </p>
+   * @param pageable pagination info (page number, size, sort)
+   * @return ResultResponse containing a page of UserVO
+   */
+  ResultResponse<Page<UserVO>> getUsers(Pageable pageable);
+
+  /**
+   * Delete a user by ID.
    *
-   * @param uid    the unique identifier of the user whose status is being updated
-   * @param status the new {@link UserStatus} to apply to the user
-   * @return a {@link ResultResponse} containing a message indicating the outcome
-   *         of the operation (success or error)
+   * @param uid unique user ID
+   * @return ResultResponse with success or error message
+   */
+  ResultResponse<String> deleteUser(String uid);
+
+  /**
+   * Update a user's information.
+   *
+   * @param uid     unique user ID
+   * @param request DTO with updated user fields
+   * @return ResultResponse with success or error message
+   */
+  ResultResponse<String> updateUser(String uid, UpdateUserRequest request);
+
+  /**
+   * Authenticate a user.
+   *
+   * @param request DTO with login credentials
+   * @return ResultResponse containing AuthVO if login succeeds
+   */
+  ResultResponse<AuthVO> login(LoginUserRequest request);
+
+  /**
+   * Update a user's status.
+   *
+   * @param uid    unique user ID
+   * @param status new UserStatus
+   * @return ResultResponse with success or error message
    */
   ResultResponse<String> updateStatus(String uid, UserStatus status);
 

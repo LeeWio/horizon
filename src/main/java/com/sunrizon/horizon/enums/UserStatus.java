@@ -18,5 +18,25 @@ public enum UserStatus {
   BANNED,
 
   /** The user account is deleted and can no longer be used. */
-  DELETED
+  DELETED;
+
+  // TODO: 是否替换 UserServiceImpl 的 updateStatus 逻辑
+  public boolean transformTo(UserStatus status) {
+    switch (status) {
+      case ACTIVE:
+        if (this == INACTIVE || status == UserStatus.BANNED) {
+          return true;
+        }
+        break;
+      case INACTIVE:
+        break;
+      case BANNED:
+        break;
+      case DELETED:
+        break;
+      case PENDING:
+        break;
+    }
+    return true;
+  }
 }

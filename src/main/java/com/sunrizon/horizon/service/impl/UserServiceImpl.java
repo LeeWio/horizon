@@ -7,6 +7,8 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Validator;
 import cn.hutool.core.util.StrUtil;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -18,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sunrizon.horizon.dto.CreateUserRequest;
 import com.sunrizon.horizon.dto.LoginUserRequest;
+import com.sunrizon.horizon.dto.UpdateUserRequest;
+import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.enums.UserStatus;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
@@ -26,10 +30,13 @@ import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IUserService;
 import com.sunrizon.horizon.utils.JwtUtil;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.SecurityContextUtil;
 import com.sunrizon.horizon.vo.AuthVO;
 import com.sunrizon.horizon.vo.UserVO;
+import com.sunrizon.horizon.enums.RoleType;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of IUserService.
@@ -38,6 +45,7 @@ import jakarta.annotation.Resource;
  * role assignment, and status changes.
  */
 @Service
+@Slf4j
 public class UserServiceImpl implements IUserService {
 
   @Resource
@@ -55,45 +63,43 @@ public class UserServiceImpl implements IUserService {
   @Resource
   private JwtUtil jwtUtil;
 
+  @Resource
+  private SecurityContextUtil securityContextUtil;
+
   /**
-   * Creates a new user in the system.
+   * Create a new user.
    *
-   * Validates email format, uniqueness of email and username.
-   * Sets default status to PENDING.
-   * Assigns roles if provided and validates their existence.
+   * Validates uniqueness, encodes password, assigns roles, and saves user.
    *
-   * @param request DTO containing user creation info
-   * @return {@link ResultResponse} containing the created {@link UserVO}
+   * @param request User creation request
+   * @return {@link ResultResponse} with created {@link UserVO}
    */
   @Override
   @Transactional
   public ResultResponse<UserVO> createUser(CreateUserRequest request) {
 
-    // 1. Validate email format
+    // Validate email format
     if (!Validator.isEmail(request.getEmail())) {
       return ResultResponse.error("Invalid email format");
     }
 
-    // 2. Check if email already exists
+    // Check email uniqueness
     if (userRepository.existsByEmail(request.getEmail())) {
       return ResultResponse.error("Email already in use");
     }
 
-    // 3. Check if username already exists
+    // Check username uniqueness
     if (userRepository.existsByUsername(request.getUsername())) {
       return ResultResponse.error("Username already in use");
     }
 
-    // 4. Map DTO -> Entity safely
+    // Map DTO to Entity
     User user = BeanUtil.copyProperties(request, User.class);
 
-    // 5. Set default status
-    user.setStatus(UserStatus.PENDING);
-
-    // 6. Encode password
+    // Encode password
     user.setPassword(passwordEncoder.encode(request.getPassword()));
 
-    // 7. Assign roles if provided
+    // Assign roles
     if (request.getRoleIds() != null && !request.getRoleIds().isEmpty()) {
       Set<Role> roles = roleRepository.findAllById(request.getRoleIds())
           .stream().collect(Collectors.toSet());
@@ -101,105 +107,89 @@ public class UserServiceImpl implements IUserService {
       if (roles.size() != request.getRoleIds().size()) {
         return ResultResponse.error("Some roles do not exist");
       }
-
       user.setRoles(roles);
     }
 
-    // 8. Save user
+    // Save user
     User savedUser = userRepository.save(user);
 
-    // 9. Convert to VO
+    // Convert to VO and return
     UserVO userVO = BeanUtil.copyProperties(savedUser, UserVO.class);
-
-    // 10. Return success response
     return ResultResponse.success("User created successfully", userVO);
   }
 
   /**
-   * Authenticates a user and generates an authorization token.
+   * Authenticate user and issue JWT token.
    *
-   * Validates the email format and credentials. Retrieves the user's record from
-   * the database, checks status, and issues a JWT authorization token on
-   * successful authentication.
-   *
-   * @param request DTO containing the user's login credentials
-   * @return {@link ResultResponse} containing an {@link AuthVO} with the
-   *         authorization token and user info
+   * @param request Login request
+   * @return {@link ResultResponse} with {@link AuthVO} containing token and user
+   *         info
    */
   @Override
   public ResultResponse<AuthVO> login(LoginUserRequest request) {
 
+    // Validate email format
     if (!Validator.isEmail(request.getEmail())) {
       return ResultResponse.error("Invalid email format");
     }
 
+    // Validate password
     if (StrUtil.isBlank(request.getPassword())) {
       return ResultResponse.error("Password cannot be empty");
     }
 
-    Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
-        request.getEmail(), request.getPassword()));
+    // Authenticate credentials
+    Authentication authentication = authenticationManager.authenticate(
+        new UsernamePasswordAuthenticationToken(
+            request.getEmail(), request.getPassword()));
 
+    // Load user by email
     User user = userRepository.findUserByEmail(request.getEmail())
         .orElseThrow(() -> new UsernameNotFoundException(
             "User not found with email: " + request.getEmail()));
 
+    // Set authentication context
     SecurityContextHolder.getContext().setAuthentication(authentication);
 
+    // Generate JWT token
     String authorization = jwtUtil.createAuthorization(authentication);
 
-    AuthVO authVO = new AuthVO(authorization, user.getUid(), user.getEmail(),
-        user.getUsername());
+    // Build response object
+    AuthVO authVO = new AuthVO(authorization, user.getUid(),
+        user.getEmail(), user.getUsername());
 
     return ResultResponse.success("Login successful", authVO);
   }
 
   /**
-   * Updates the status of a user account.
+   * Update user account status with strict state transitions.
    *
-   * <p>
-   * This method enforces strict state transition rules to prevent illegal
-   * status changes. For example:
-   * <ul>
-   * <li>PENDING → can only become ACTIVE or BANNED</li>
-   * <li>ACTIVE → can only become INACTIVE or BANNED</li>
-   * <li>INACTIVE → can only become ACTIVE or DELETED</li>
-   * <li>BANNED → can only become ACTIVE or DELETED</li>
-   * <li>DELETED → cannot be changed anymore</li>
-   * </ul>
-   * </p>
-   *
-   * <p>
-   * If the status change is valid, the user entity will be updated in the
-   * database. Otherwise, an error response is returned.
-   * </p>
-   *
-   * <p>
-   * This method is transactional, and will roll back on any {@link Exception}.
-   * </p>
-   *
-   * @param uid    Unique ID of the user to update
-   * @param status The new {@link UserStatus} to set
-   * @return {@link ResultResponse} containing success or error message
+   * @param uid    User ID
+   * @param status New {@link UserStatus}
+   * @return {@link ResultResponse} indicating success or failure
    */
   @Transactional(rollbackFor = Exception.class)
   @Override
   public ResultResponse<String> updateStatus(String uid, UserStatus status) {
 
+    // Load user by ID
     User user = userRepository.findById(uid)
         .orElseThrow(() -> new UsernameNotFoundException("User not found with uid: " + uid));
 
-    UserStatus userStatus = user.getStatus();
+    UserStatus currentStatus = user.getStatus();
 
-    if (userStatus == UserStatus.DELETED) {
+    // Deleted users cannot be updated
+    if (currentStatus == UserStatus.DELETED) {
       return ResultResponse.error("User has been deleted and cannot be updated.");
     }
 
-    if (userStatus == status) {
+    // Skip if already same status
+    if (currentStatus == status) {
       return ResultResponse.success("User status is already " + status);
     }
 
-    switch (userStatus) {
+    // Validate allowed transitions
+    switch (currentStatus) {
       case PENDING:
         if (status == UserStatus.ACTIVE || status == UserStatus.BANNED) {
           user.setStatus(status);
@@ -236,37 +226,133 @@ public class UserServiceImpl implements IUserService {
         return ResultResponse.error("Invalid user status.");
     }
 
+    // Save changes
     userRepository.saveAndFlush(user);
 
     return ResultResponse.success("User status updated successfully to " + status);
   }
 
   /**
-   * Retrieves a user by their unique ID.
+   * Get user by ID.
    *
-   * <p>
-   * Fetches the user from the database using {@link UserRepository#findById}.
-   * If the user exists, maps to {@link UserVO} and returns in
-   * {@link ResultResponse}.
-   * Otherwise, throws {@link UsernameNotFoundException}.
-   * </p>
-   *
-   * @param uid Unique identifier of the user
-   * @return {@link ResultResponse} containing {@link UserVO} or error
+   * @param uid User ID
+   * @return {@link ResultResponse} with {@link UserVO} or error
    */
   @Override
   public ResultResponse<UserVO> getUser(String uid) {
 
+    // Validate input
     if (StrUtil.isBlank(uid)) {
       return ResultResponse.error("User ID cannot be empty");
     }
 
+    // Load user by ID
     User user = userRepository.findById(uid)
         .orElseThrow(() -> new UsernameNotFoundException("User not found with uid: " + uid));
 
+    // Map entity to VO
     UserVO userVO = BeanUtil.copyProperties(user, UserVO.class);
 
+    // Return response
     return ResultResponse.success(userVO);
+  }
+
+  /**
+   * Delete user by ID.
+   *
+   * @param uid User ID
+   * @return {@link ResultResponse} with success or error message
+   */
+  @Override
+  public ResultResponse<String> deleteUser(String uid) {
+
+    // Validate input
+    if (StrUtil.isBlank(uid)) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "User ID is required");
+    }
+
+    // Find user
+    User user = userRepository.findById(uid)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + uid));
+
+    // Get current logged-in user ID
+    String currentUserId = securityContextUtil.getCurrentUserId()
+        .orElseThrow(() -> new UsernameNotFoundException("Current user not found"));
+
+    // Prevent self-deletion
+    if (StrUtil.equals(user.getUid(), currentUserId)) {
+      return ResultResponse.error("Cannot delete the current user");
+    }
+
+    // Prevent deletion of admin (except SUPER_ADMIN)
+    if (user.getRoles() != null &&
+        user.getRoles().stream().anyMatch(role -> RoleType.ADMIN.equals(role.getName()))) {
+      return ResultResponse.error(ResponseCode.FORBIDDEN, "Deletion of admin accounts is not allowed");
+    }
+
+    // Prevent deletion if already soft-deleted
+    if (UserStatus.DELETED.equals(user.getStatus())) {
+      return ResultResponse.error("User is already marked as deleted");
+    }
+
+    // Hard delete
+    userRepository.delete(user);
+
+    return ResultResponse.success("User deleted successfully");
+  }
+
+  /**
+   * Get paginated list of users.
+   *
+   * @param pageable Pagination and sorting info
+   * @return {@link ResultResponse} with paginated {@link UserVO} list
+   */
+  @Override
+  public ResultResponse<Page<UserVO>> getUsers(Pageable pageable) {
+    // Fetch paginated users
+    Page<User> userPage = userRepository.findAll(pageable);
+
+    // Map entity to VO
+    Page<UserVO> voPage = userPage.map(user -> BeanUtil.copyProperties(user, UserVO.class));
+
+    // Return response
+    return ResultResponse.success(voPage);
+  }
+
+  /**
+   * TODO: 待实现
+   * Update user details.
+   *
+   * @param uid     User ID
+   * @param request Update request
+   * @return {@link ResultResponse} indicating success or failure
+   */
+  @Override
+  public ResultResponse<String> updateUser(String uid, UpdateUserRequest request) {
+
+    // Validate input
+    if (StrUtil.isBlank(uid)) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "User ID is required");
+    }
+
+    // Find user
+    User user = userRepository.findById(uid)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + uid));
+
+    // Map fields from request to entity
+    // ⚠️ 只更新允许修改的字段，避免直接覆盖敏感信息
+    if (StrUtil.isNotBlank(request.getUsername())) {
+      user.setUsername(request.getUsername());
+    }
+    if (StrUtil.isNotBlank(request.getEmail())) {
+      user.setEmail(request.getEmail());
+    }
+    // 可在此添加更多字段更新逻辑
+
+    // Save changes
+    userRepository.saveAndFlush(user);
+
+    return ResultResponse.success("User updated successfully");
   }
 
 }

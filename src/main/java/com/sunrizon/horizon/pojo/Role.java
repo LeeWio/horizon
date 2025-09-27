@@ -25,6 +25,7 @@ import com.sunrizon.horizon.enums.RoleType;
 @Table(name = "role")
 @Getter
 @Setter
+@ToString
 @EntityListeners(AuditingEntityListener.class)
 public class Role implements Serializable {
 

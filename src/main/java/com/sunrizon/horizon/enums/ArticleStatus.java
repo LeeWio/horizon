@@ -1,4 +1,3 @@
-
 package com.sunrizon.horizon.enums;
 
 /**

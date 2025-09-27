@@ -23,6 +23,8 @@ public class UpdateUserRequest {
   /** New password (optional) */
   private String password;
 
+  private String avatar;
+
   /** Optional role IDs to update user's roles */
   private Set<String> roleIds;
 }

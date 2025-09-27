@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sunrizon.horizon.dto.AssignRolesRequest;
 import com.sunrizon.horizon.dto.CreateRoleRequest;
+import com.sunrizon.horizon.pojo.Permission;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.RoleRepository;
@@ -15,6 +16,7 @@ import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IRoleService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.RoleVO;
+import com.sunrizon.horizon.repository.PermissionRepository;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
@@ -39,6 +41,9 @@ public class RoleServiceImpl implements IRoleService {
   @Resource
   private UserRepository userRepository;
 
+  @Resource
+  private PermissionRepository permissionRepository;
+
   /**
    * Creates a new role in the system.
    *
@@ -48,6 +53,7 @@ public class RoleServiceImpl implements IRoleService {
   @Override
   @Transactional(rollbackFor = Exception.class)
   public ResultResponse<RoleVO> createRole(CreateRoleRequest request) {
+
     // Validate input
     if (StrUtil.isBlank(request.getName())) {
       return ResultResponse.error("Role name cannot be empty.");
@@ -55,6 +61,29 @@ public class RoleServiceImpl implements IRoleService {
 
     // Convert DTO to Entity
     Role role = BeanUtil.copyProperties(request, Role.class);
+
+    // if (request.getRoleIds() != null && !request.getRoleIds().isEmpty()) {
+    // Set<Role> roles = roleRepository.findAllById(request.getRoleIds())
+    // .stream().collect(Collectors.toSet());
+    //
+    // if (roles.size() != request.getRoleIds().size()) {
+    // return ResultResponse.error("Some roles do not exist");
+    // }
+    //
+    // user.setRoles(roles);
+    // }
+    //
+
+    if (request.getPermissionIds() != null && !request.getPermissionIds().isEmpty()) {
+      Set<Permission> permissions = permissionRepository.findAllById(request.getPermissionIds()).stream()
+          .collect(Collectors.toSet());
+
+      if (permissions.size() != request.getPermissionIds().size()) {
+        return ResultResponse.error("Some permissions do not exist");
+      }
+
+      role.setPermissions(permissions);
+    }
 
     // Save to DB
     Role savedRole = roleRepository.saveAndFlush(role);

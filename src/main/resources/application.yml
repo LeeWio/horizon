@@ -58,6 +58,22 @@ logging:
     root: INFO
     org.springframework: INFO
 
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+    tryItOutEnabled: true
+    filter: true
+    displayRequestDuration: true
+  show-actuator: true
+  default-consumes-media-type: application/json
+  default-produces-media-type: application/json
+
 # 可选 OpenAPI / Swagger 配置
 # springdoc:
 #   api-docs:
