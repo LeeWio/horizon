@@ -31,11 +31,11 @@ public class PermissionServiceImpl implements IPermissionService {
   public ResultResponse<PermissionVO> createPermission(CreatePermissionRequest request) {
 
     if (StrUtil.isBlank(request.getName().name())) {
-      return ResultResponse.error("Permission name cannot be null");
+      return ResultResponse.error(ResponseCode.PERMISSION_NAME_CANNOT_BE_NULL);
     }
 
     if (permissionRepository.existsByName(request.getName())) {
-      return ResultResponse.error("Permission name already exists");
+      return ResultResponse.error(ResponseCode.PERMISSION_NAME_ALREADY_EXISTS);
     }
 
     Permission permission = BeanUtil.copyProperties(request, Permission.class);
@@ -55,7 +55,8 @@ public class PermissionServiceImpl implements IPermissionService {
       return ResultResponse.error(ResponseCode.BAD_REQUEST);
     }
 
-    Permission permission = permissionRepository.findById(pid).orElseThrow(() -> new EntityNotFoundException(""));
+    Permission permission = permissionRepository.findById(pid)
+        .orElseThrow(() -> new EntityNotFoundException("Permission not found for ID: " + pid));
 
     PermissionVO permissionVO = BeanUtil.copyProperties(permission, PermissionVO.class);
 
@@ -74,7 +75,7 @@ public class PermissionServiceImpl implements IPermissionService {
 
     permissionRepository.delete(permission);
 
-    return ResultResponse.success("Permission deleted successfully");
+    return ResultResponse.success(ResponseCode.PERMISSION_DELETED_SUCCESSFULLY);
 
   }
 

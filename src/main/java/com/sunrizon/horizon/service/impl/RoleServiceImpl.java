@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sunrizon.horizon.dto.AssignRolesRequest;
 import com.sunrizon.horizon.dto.CreateRoleRequest;
+import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.pojo.Permission;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
@@ -56,7 +57,7 @@ public class RoleServiceImpl implements IRoleService {
 
     // Validate input
     if (StrUtil.isBlank(request.getName())) {
-      return ResultResponse.error("Role name cannot be empty.");
+      return ResultResponse.error(ResponseCode.ROLE_NAME_CANNOT_BE_EMPTY);
     }
 
     // Convert DTO to Entity
@@ -79,7 +80,7 @@ public class RoleServiceImpl implements IRoleService {
           .collect(Collectors.toSet());
 
       if (permissions.size() != request.getPermissionIds().size()) {
-        return ResultResponse.error("Some permissions do not exist");
+        return ResultResponse.error(ResponseCode.SOME_PERMISSIONS_DO_NOT_EXIST);
       }
 
       role.setPermissions(permissions);
@@ -105,7 +106,7 @@ public class RoleServiceImpl implements IRoleService {
   public ResultResponse<RoleVO> getRole(String rid) {
     // Validate input
     if (StrUtil.isBlank(rid)) {
-      return ResultResponse.error("Role ID cannot be empty");
+      return ResultResponse.error(ResponseCode.ROLE_ID_CANNOT_BE_EMPTY);
     }
 
     // Retrieve role from DB
@@ -129,7 +130,7 @@ public class RoleServiceImpl implements IRoleService {
   public ResultResponse<String> deleteRole(String rid) {
     // Validate input
     if (StrUtil.isBlank(rid)) {
-      return ResultResponse.error("Role ID cannot be empty");
+      return ResultResponse.error(ResponseCode.ROLE_ID_CANNOT_BE_EMPTY);
     }
 
     // Find the role
@@ -139,7 +140,7 @@ public class RoleServiceImpl implements IRoleService {
     // Delete role
     roleRepository.delete(role);
 
-    return ResultResponse.success("Role deleted successfully");
+    return ResultResponse.success(ResponseCode.ROLE_DELETED_SUCCESSFULLY);
   }
 
   @Override
@@ -147,11 +148,11 @@ public class RoleServiceImpl implements IRoleService {
   public ResultResponse<String> assignRoles(AssignRolesRequest request) {
 
     if (StrUtil.isBlank(request.getUid())) {
-      return ResultResponse.error("User ID must be provided");
+      return ResultResponse.error(ResponseCode.USER_ID_MUST_BE_PROVIDED);
     }
 
     if (CollUtil.isEmpty(request.getRoleIds())) {
-      return ResultResponse.error("Role IDs must be provided");
+      return ResultResponse.error(ResponseCode.ROLE_IDS_MUST_BE_PROVIDED);
     }
 
     User user = userRepository.findById(request.getUid())
@@ -160,14 +161,14 @@ public class RoleServiceImpl implements IRoleService {
     Set<Role> roles = roleRepository.findAllById(request.getRoleIds()).stream().collect(Collectors.toSet());
 
     if (!NumberUtil.equals(roles.size(), request.getRoleIds().size())) {
-      return ResultResponse.error("Some roles do not exist");
+      return ResultResponse.error(ResponseCode.SOME_ROLES_DO_NOT_EXIST);
     }
 
     user.setRoles(roles);
 
     userRepository.saveAndFlush(user);
 
-    return ResultResponse.success("Roles assigned successfully");
+    return ResultResponse.success(ResponseCode.ROLES_ASSIGNED_SUCCESSFULLY);
   }
 
 }

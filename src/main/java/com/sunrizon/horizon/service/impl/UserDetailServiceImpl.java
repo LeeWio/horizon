@@ -7,9 +7,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import com.sunrizon.horizon.exception.UsernameNotFoundException;
 import com.sunrizon.horizon.pojo.CustomUserDetails;
 import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.UserRepository;
@@ -41,8 +41,7 @@ public class UserDetailServiceImpl implements UserDetailsService {
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     // Fetch the user by email
     User user = userRepository.findUserByEmail(username)
-        .orElseThrow(() -> new UsernameNotFoundException(
-            "User not found with email: " + username));
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with emaail" + username));
 
     // Collect authorities from roles and permissions
     Set<GrantedAuthority> authorities = user.getRoles().stream()

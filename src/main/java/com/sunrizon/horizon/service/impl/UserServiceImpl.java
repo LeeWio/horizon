@@ -1,5 +1,6 @@
 package com.sunrizon.horizon.service.impl;
 
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -80,17 +81,17 @@ public class UserServiceImpl implements IUserService {
 
     // Validate email format
     if (!Validator.isEmail(request.getEmail())) {
-      return ResultResponse.error("Invalid email format");
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
     }
 
     // Check email uniqueness
     if (userRepository.existsByEmail(request.getEmail())) {
-      return ResultResponse.error("Email already in use");
+      return ResultResponse.error(ResponseCode.USER_EMAIL_EXISTS);
     }
 
     // Check username uniqueness
     if (userRepository.existsByUsername(request.getUsername())) {
-      return ResultResponse.error("Username already in use");
+      return ResultResponse.error(ResponseCode.USER_ALREADY_EXISTS);
     }
 
     // Map DTO to Entity
@@ -105,7 +106,7 @@ public class UserServiceImpl implements IUserService {
           .stream().collect(Collectors.toSet());
 
       if (roles.size() != request.getRoleIds().size()) {
-        return ResultResponse.error("Some roles do not exist");
+        return ResultResponse.error(ResponseCode.ROLE_IDS_NOT_FOUND);
       }
       user.setRoles(roles);
     }
@@ -115,7 +116,7 @@ public class UserServiceImpl implements IUserService {
 
     // Convert to VO and return
     UserVO userVO = BeanUtil.copyProperties(savedUser, UserVO.class);
-    return ResultResponse.success("User created successfully", userVO);
+    return ResultResponse.success(ResponseCode.USER_CREATED, userVO);
   }
 
   /**
@@ -130,12 +131,12 @@ public class UserServiceImpl implements IUserService {
 
     // Validate email format
     if (!Validator.isEmail(request.getEmail())) {
-      return ResultResponse.error("Invalid email format");
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
     }
 
     // Validate password
     if (StrUtil.isBlank(request.getPassword())) {
-      return ResultResponse.error("Password cannot be empty");
+      return ResultResponse.error(ResponseCode.USER_PASSWORD_REQUIRED);
     }
 
     // Authenticate credentials
@@ -145,8 +146,7 @@ public class UserServiceImpl implements IUserService {
 
     // Load user by email
     User user = userRepository.findUserByEmail(request.getEmail())
-        .orElseThrow(() -> new UsernameNotFoundException(
-            "User not found with email: " + request.getEmail()));
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + request.getEmail()));
 
     // Set authentication context
     SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -158,7 +158,7 @@ public class UserServiceImpl implements IUserService {
     AuthVO authVO = new AuthVO(authorization, user.getUid(),
         user.getEmail(), user.getUsername());
 
-    return ResultResponse.success("Login successful", authVO);
+    return ResultResponse.success(ResponseCode.LOGIN_SUCCESS, authVO);
   }
 
   /**
@@ -180,56 +180,26 @@ public class UserServiceImpl implements IUserService {
 
     // Deleted users cannot be updated
     if (currentStatus == UserStatus.DELETED) {
-      return ResultResponse.error("User has been deleted and cannot be updated.");
+      return ResultResponse.error(ResponseCode.USER_HAS_BEEN_DELETED_CANNOT_UPDATE);
     }
 
     // Skip if already same status
     if (currentStatus == status) {
-      return ResultResponse.success("User status is already " + status);
+      return ResultResponse.success(ResponseCode.USER_STATUS_ALREADY, "User status is already " + status);
     }
 
     // Validate allowed transitions
-    switch (currentStatus) {
-      case PENDING:
-        if (status == UserStatus.ACTIVE || status == UserStatus.BANNED) {
-          user.setStatus(status);
-        } else {
-          return ResultResponse.error("Pending user can only be activated or banned.");
-        }
-        break;
-
-      case ACTIVE:
-        if (status == UserStatus.INACTIVE || status == UserStatus.BANNED) {
-          user.setStatus(status);
-        } else {
-          return ResultResponse.error("Active user can only be set to inactive or banned.");
-        }
-        break;
-
-      case INACTIVE:
-        if (status == UserStatus.ACTIVE || status == UserStatus.DELETED) {
-          user.setStatus(status);
-        } else {
-          return ResultResponse.error("Inactive user can only be activated or deleted.");
-        }
-        break;
-
-      case BANNED:
-        if (status == UserStatus.ACTIVE || status == UserStatus.DELETED) {
-          user.setStatus(status);
-        } else {
-          return ResultResponse.error("Banned user can only be reactivated or deleted.");
-        }
-        break;
-
-      default:
-        return ResultResponse.error("Invalid user status.");
+    Optional<String> error = currentStatus.transitionTo(status);
+    if (error.isPresent()) {
+      return ResultResponse.error(ResponseCode.FAILURE, error.get());
     }
+    user.setStatus(status);
 
     // Save changes
     userRepository.saveAndFlush(user);
 
-    return ResultResponse.success("User status updated successfully to " + status);
+    return ResultResponse.success(ResponseCode.USER_STATUS_UPDATED_SUCCESSFULLY,
+        "User status updated successfully to " + status);
   }
 
   /**
@@ -243,7 +213,7 @@ public class UserServiceImpl implements IUserService {
 
     // Validate input
     if (StrUtil.isBlank(uid)) {
-      return ResultResponse.error("User ID cannot be empty");
+      return ResultResponse.error(ResponseCode.USER_ID_CANNOT_BE_EMPTY);
     }
 
     // Load user by ID
@@ -276,12 +246,15 @@ public class UserServiceImpl implements IUserService {
         .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + uid));
 
     // Get current logged-in user ID
-    String currentUserId = securityContextUtil.getCurrentUserId()
-        .orElseThrow(() -> new UsernameNotFoundException("Current user not found"));
+    Optional<String> optionalCurrentUserId = securityContextUtil.getCurrentUserId();
+    if (optionalCurrentUserId.isEmpty()) {
+      return ResultResponse.error(ResponseCode.CURRENT_USER_NOT_FOUND);
+    }
+    String currentUserId = optionalCurrentUserId.get();
 
     // Prevent self-deletion
     if (StrUtil.equals(user.getUid(), currentUserId)) {
-      return ResultResponse.error("Cannot delete the current user");
+      return ResultResponse.error(ResponseCode.CANNOT_DELETE_CURRENT_USER);
     }
 
     // Prevent deletion of admin (except SUPER_ADMIN)
@@ -292,13 +265,13 @@ public class UserServiceImpl implements IUserService {
 
     // Prevent deletion if already soft-deleted
     if (UserStatus.DELETED.equals(user.getStatus())) {
-      return ResultResponse.error("User is already marked as deleted");
+      return ResultResponse.error(ResponseCode.USER_ALREADY_MARKED_DELETED);
     }
 
     // Hard delete
     userRepository.delete(user);
 
-    return ResultResponse.success("User deleted successfully");
+    return ResultResponse.success(ResponseCode.USER_DELETED_SUCCESSFULLY);
   }
 
   /**
@@ -352,7 +325,7 @@ public class UserServiceImpl implements IUserService {
     // Save changes
     userRepository.saveAndFlush(user);
 
-    return ResultResponse.success("User updated successfully");
+    return ResultResponse.success(ResponseCode.USER_UPDATED_SUCCESSFULLY);
   }
 
 }
