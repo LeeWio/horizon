@@ -53,6 +53,25 @@ public interface IUserService {
   ResultResponse<String> updateUser(String uid, UpdateUserRequest request);
 
   /**
+   * Send OTP (One-Time Password) to the specified email address.
+   * Generates and sends a verification code to the user's email for authentication purposes.
+   *
+   * @param email the email address to send the OTP to
+   * @return ResultResponse containing success message if OTP was sent successfully, error message otherwise
+   */
+  ResultResponse<String> sendOtp(String email);
+
+  /**
+   * Verify the OTP (One-Time Password) provided by the user.
+   * Validates the OTP code against the one stored in the system for the given email.
+   *
+   * @param email the email address associated with the OTP
+   * @param otp the OTP code to verify
+   * @return ResultResponse containing true if OTP is valid, false otherwise
+   */
+  ResultResponse<Boolean> verifyOtp(String email, String otp);
+
+  /**
    * Authenticate a user.
    *
    * @param request DTO with login credentials

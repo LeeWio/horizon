@@ -106,7 +106,12 @@ public enum ResponseCode {
   PERMISSION_NOT_FOUND(9204, "Permission not found for ID: %s"),
 
   // ==================== User Detail Service ====================
-  USER_NOT_FOUND_WITH_EMAIL(9301, "User not found with email: %s");
+  USER_NOT_FOUND_WITH_EMAIL(9301, "User not found with email: %s"),
+
+  // ==================== OTP Verification ====================
+  INVALID_OTP(9401, "Invalid OTP code"),
+  OTP_EXPIRED(9402, "OTP code has expired"),
+  OTP_VERIFIED(9403, "OTP verified successfully");
 
   private final int status;
   private final String message;

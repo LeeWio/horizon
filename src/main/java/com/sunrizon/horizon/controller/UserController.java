@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sunrizon.horizon.dto.CreateUserRequest;
 import com.sunrizon.horizon.dto.LoginUserRequest;
 import com.sunrizon.horizon.enums.UserStatus;
-import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IUserService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.AuthVO;
@@ -43,6 +42,30 @@ public class UserController {
   // @PreAuthorize("hasAuthority('USER_CREATE')")
   public ResultResponse<UserVO> createUser(@Valid @RequestBody CreateUserRequest request) {
     return userService.createUser(request);
+  }
+
+  /**
+   * Send OTP to user's email for verification.
+   *
+   * @param email the email address to send OTP to
+   * @return ResultResponse with success or error message
+   */
+  @PostMapping("/send-otp")
+  public ResultResponse<String> sendOtp(@RequestParam String email) {
+    return userService.sendOtp(email);
+  }
+
+  /**
+   * Verify OTP sent to user's email.
+   *
+   * @param email the email address associated with the OTP
+   * @param otp   the OTP code to verify
+   * @return ResultResponse containing verification result (true if valid, false
+   *         otherwise)
+   */
+  @PostMapping("/verify-otp")
+  public ResultResponse<Boolean> verifyOtp(@RequestParam String email, @RequestParam String otp) {
+    return userService.verifyOtp(email, otp);
   }
 
   /**

@@ -13,7 +13,6 @@ import com.sunrizon.horizon.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 @Table(name = "user")
 @Entity

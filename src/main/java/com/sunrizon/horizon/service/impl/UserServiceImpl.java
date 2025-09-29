@@ -1,13 +1,18 @@
 package com.sunrizon.horizon.service.impl;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Validator;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +24,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.classmate.members.RawConstructor;
+import com.sunrizon.horizon.constants.RabbitContants;
+import com.sunrizon.horizon.constants.RedisContants;
 import com.sunrizon.horizon.dto.CreateUserRequest;
 import com.sunrizon.horizon.dto.LoginUserRequest;
 import com.sunrizon.horizon.dto.UpdateUserRequest;
@@ -30,10 +38,12 @@ import com.sunrizon.horizon.repository.RoleRepository;
 import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.IUserService;
 import com.sunrizon.horizon.utils.JwtUtil;
+import com.sunrizon.horizon.utils.RedisUtil;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.utils.SecurityContextUtil;
 import com.sunrizon.horizon.vo.AuthVO;
 import com.sunrizon.horizon.vo.UserVO;
+
 import com.sunrizon.horizon.enums.RoleType;
 
 import jakarta.annotation.Resource;
@@ -48,6 +58,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @Slf4j
 public class UserServiceImpl implements IUserService {
+
+  @Resource
+  private RabbitTemplate rabbitTemplate;
 
   @Resource
   private UserRepository userRepository;
@@ -66,6 +79,34 @@ public class UserServiceImpl implements IUserService {
 
   @Resource
   private SecurityContextUtil securityContextUtil;
+
+  @Resource
+  private RedisUtil redisUtil;
+
+  /**
+   * Sends an OTP (One-Time Password) to the specified email address.
+   * Validates the email format and checks if the user exists before sending
+   * the OTP.
+   * 
+   * @param email the email address to send the OTP to
+   * @return ResultResponse containing success or error message
+   */
+  @Override
+  public ResultResponse<String> sendOtp(String email) {
+
+    if (!Validator.isEmail(email)) {
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
+    }
+
+    if (!userRepository.existsByEmail(email)) {
+      return ResultResponse.error(ResponseCode.USER_NOT_FOUND);
+    }
+
+    rabbitTemplate.convertAndSend(RabbitContants.OTP_VERIFICATION_EXCHANGE, RabbitContants.OTP_VERIFICATION_ROUTING_KEY,
+        email);
+
+    return ResultResponse.success(ResponseCode.SUCCESS);
+  }
 
   /**
    * Create a new user.
@@ -117,6 +158,43 @@ public class UserServiceImpl implements IUserService {
     // Convert to VO and return
     UserVO userVO = BeanUtil.copyProperties(savedUser, UserVO.class);
     return ResultResponse.success(ResponseCode.USER_CREATED, userVO);
+  }
+
+  /**
+   * Verifies the OTP (One-Time Password) provided by the user.
+   * Checks if the OTP matches the one stored in Redis for the given email.
+   *
+   * @param email the email address associated with the OTP
+   * @param otp   the OTP code to verify
+   * @return ResultResponse containing true if OTP is valid, false otherwise
+   * 
+   */
+  @Override
+  public ResultResponse<Boolean> verifyOtp(String email, String otp) {
+
+    if (!Validator.isEmail(email)) {
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD, false);
+    }
+
+    if (StrUtil.isBlank(otp)) {
+      return ResultResponse.error(ResponseCode.INVALID_OTP, false);
+    }
+
+    String redisKey = String.format(RedisContants.OTP_KEY_FORMAT, email);
+
+    Optional<String> storedOtpOpt = redisUtil.get(redisKey, String.class);
+    if (storedOtpOpt.isEmpty()) {
+      // OTP not found in Redis (may have expired)
+      return ResultResponse.error(ResponseCode.OTP_EXPIRED, false);
+    }
+
+    String storedOtp = storedOtpOpt.get();
+    if (StrUtil.equals(storedOtp, otp)) {
+      redisUtil.delete(redisKey);
+      return ResultResponse.success(ResponseCode.OTP_VERIFIED, true);
+    } else {
+      return ResultResponse.error(ResponseCode.INVALID_OTP, false);
+    }
   }
 
   /**
