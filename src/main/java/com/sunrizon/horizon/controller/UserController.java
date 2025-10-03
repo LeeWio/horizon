@@ -70,12 +70,12 @@ public class UserController {
 
   /**
    * Authenticate a user and return a JWT token.
-   *
+   * 
    * @param request DTO containing login credentials (email, password)
    * @return ResultResponse wrapping AuthVO containing JWT token and user info
    */
-  @PostMapping("/login")
-  public ResultResponse<AuthVO> login(@Valid @RequestBody LoginUserRequest request) {
+  @PostMapping("/authenticate")
+  public ResultResponse<AuthVO> authenticateUser(@Valid @RequestBody LoginUserRequest request) {
     return userService.login(request);
   }
 

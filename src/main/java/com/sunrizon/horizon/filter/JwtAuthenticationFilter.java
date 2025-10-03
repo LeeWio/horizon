@@ -46,7 +46,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
       UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
           userDetails, null, userDetails.getAuthorities());
 
-      // TODO: get ip RemoteIpAddress
       WebAuthenticationDetails webAuthenticationDetails = new WebAuthenticationDetailsSource().buildDetails(request);
       usernamePasswordAuthenticationToken.setDetails(webAuthenticationDetails);
 

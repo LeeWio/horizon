@@ -15,6 +15,7 @@ import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.UserRepository;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Implementation of Spring Security's UserDetailsService.
@@ -25,6 +26,7 @@ import jakarta.annotation.Resource;
  * including roles and permissions.
  */
 @Service
+@Slf4j
 public class UserDetailServiceImpl implements UserDetailsService {
 
   @Resource
@@ -40,6 +42,8 @@ public class UserDetailServiceImpl implements UserDetailsService {
   @Override
   public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
     // Fetch the user by email
+    log.error("UserDetailServiceImpl: {}", username);
+
     User user = userRepository.findUserByEmail(username)
         .orElseThrow(() -> new UsernameNotFoundException("User not found with emaail" + username));
 

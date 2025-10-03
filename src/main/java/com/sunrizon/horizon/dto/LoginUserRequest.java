@@ -9,7 +9,7 @@ import lombok.Data;
 public class LoginUserRequest {
 
   /** Username of the user (eg. 3499508634@qq.com) */
-  @NotBlank(message = "Username cannot be blank")
+  // @NotBlank(message = "Username cannot be blank")
   @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
   private String username;
 

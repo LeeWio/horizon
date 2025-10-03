@@ -15,13 +15,18 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import com.sunrizon.horizon.filter.CustomAccessDeniedHandler;
+import com.sunrizon.horizon.filter.CustomAuthenticationEntryPoint;
+import com.sunrizon.horizon.filter.CustomAuthenticationFailureHandler;
 import com.sunrizon.horizon.filter.JwtAuthenticationFilter;
 
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * <p>
@@ -44,10 +49,20 @@ import jakarta.annotation.Resource;
 @Configuration
 @EnableMethodSecurity
 @EnableJpaAuditing
+@Slf4j
 public class SecurityConfig {
 
   @Resource
   private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+  @Resource
+  private CustomAuthenticationFailureHandler customAuthenticationFailureHandler;
+
+  @Resource
+  private CustomAccessDeniedHandler customAccessDeniedHandler;
+
+  @Resource
+  private CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
   /**
    * Password encoder using BCrypt.
@@ -119,6 +134,10 @@ public class SecurityConfig {
 
     http.sessionManagement(session -> session
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
+    http.exceptionHandling(exceptionHandling -> exceptionHandling
+        .accessDeniedHandler(customAccessDeniedHandler)
+        .authenticationEntryPoint(customAuthenticationEntryPoint));
 
     http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

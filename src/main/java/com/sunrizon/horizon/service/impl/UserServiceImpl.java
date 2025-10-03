@@ -1,15 +1,11 @@
 package com.sunrizon.horizon.service.impl;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.lang.Validator;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -24,7 +20,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.classmate.members.RawConstructor;
 import com.sunrizon.horizon.constants.RabbitContants;
 import com.sunrizon.horizon.constants.RedisContants;
 import com.sunrizon.horizon.dto.CreateUserRequest;
@@ -197,12 +192,13 @@ public class UserServiceImpl implements IUserService {
     }
   }
 
-  /**
+  /*
    * Authenticate user and issue JWT token.
    *
    * @param request Login request
+   * 
    * @return {@link ResultResponse} with {@link AuthVO} containing token and user
-   *         info
+   * info
    */
   @Override
   public ResultResponse<AuthVO> login(LoginUserRequest request) {
@@ -218,9 +214,14 @@ public class UserServiceImpl implements IUserService {
     }
 
     // Authenticate credentials
-    Authentication authentication = authenticationManager.authenticate(
+    log.error("enter 1");
+
+    Authentication authentication;
+    authentication = authenticationManager.authenticate(
+
         new UsernamePasswordAuthenticationToken(
             request.getEmail(), request.getPassword()));
+    log.error("enter 2");
 
     // Load user by email
     User user = userRepository.findUserByEmail(request.getEmail())
