@@ -114,7 +114,6 @@ public class UserServiceImpl implements IUserService {
   @Override
   @Transactional
   public ResultResponse<UserVO> createUser(CreateUserRequest request) {
-
     // Validate email format
     if (!Validator.isEmail(request.getEmail())) {
       return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
@@ -214,8 +213,6 @@ public class UserServiceImpl implements IUserService {
     }
 
     // Authenticate credentials
-    log.error("enter 1");
-
     Authentication authentication;
     authentication = authenticationManager.authenticate(
 

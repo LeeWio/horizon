@@ -38,7 +38,7 @@ public class UserController {
    * @param request DTO containing user creation data
    * @return ResultResponse wrapping the created UserVO
    */
-  @PostMapping
+  @PostMapping("/create")
   // @PreAuthorize("hasAuthority('USER_CREATE')")
   public ResultResponse<UserVO> createUser(@Valid @RequestBody CreateUserRequest request) {
     return userService.createUser(request);

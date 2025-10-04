@@ -38,7 +38,7 @@ public class User implements Serializable {
   private String password;
 
   @Column(name = "avatar")
-  private String avatar;
+  private String avatar = "https://i.pravatar.cc/150?u=a042581f4e29026024d";
 
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false, length = 20)

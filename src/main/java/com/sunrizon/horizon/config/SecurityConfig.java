@@ -1,4 +1,3 @@
-
 package com.sunrizon.horizon.config;
 
 import org.springframework.context.annotation.Bean;
@@ -15,7 +14,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -135,7 +133,7 @@ public class SecurityConfig {
     http.sessionManagement(session -> session
         .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-    http.exceptionHandling(exceptionHandling -> exceptionHandling
+    http.exceptionHandling(ehc -> ehc
         .accessDeniedHandler(customAccessDeniedHandler)
         .authenticationEntryPoint(customAuthenticationEntryPoint));
 
