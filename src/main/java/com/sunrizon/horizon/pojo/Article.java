@@ -2,6 +2,7 @@ package com.sunrizon.horizon.pojo;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.Set;
 
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -66,4 +67,19 @@ public class Article implements Serializable {
   @LastModifiedBy
   @Column(name = "updated_by", nullable = false)
   private String updatedBy;
+
+  /** Categories associated with this article */
+  @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+  @JoinTable(name = "article_category", joinColumns = @JoinColumn(name = "aid", referencedColumnName = "aid"), inverseJoinColumns = @JoinColumn(name = "cid", referencedColumnName = "id"))
+  private Set<Category> categories;
+
+  /** Series this article belongs to */
+  @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+  @JoinTable(name = "series_article", joinColumns = @JoinColumn(name = "aid", referencedColumnName = "aid"), inverseJoinColumns = @JoinColumn(name = "series_id", referencedColumnName = "sid"))
+  private Set<Series> series;
+
+  /** Tags associated with this article */
+  @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
+  @JoinTable(name = "article_tag", joinColumns = @JoinColumn(name = "aid", referencedColumnName = "aid"), inverseJoinColumns = @JoinColumn(name = "tid", referencedColumnName = "tid"))
+  private Set<Tag> tags;
 }

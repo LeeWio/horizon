@@ -16,8 +16,8 @@ import lombok.Setter;
 
 @Table(name = "user")
 @Entity
-@Getter
 @Setter
+@Getter
 @EntityListeners(AuditingEntityListener.class)
 public class User implements Serializable {
 

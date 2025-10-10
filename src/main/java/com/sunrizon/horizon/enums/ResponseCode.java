@@ -48,15 +48,48 @@ public enum ResponseCode {
   ARTICLE_PERMISSION_DENIED(2003, "No permission to modify this article"),
   ARTICLE_TITLE_EXISTS(2004, "Article title already exists"),
   ARTICLE_SLUG_EXISTS(2005, "Article slug already exists"),
+  ARTICLE_CREATED(2006, "Article created successfully"),
 
   // ==================== Category Errors ====================
   CATEGORY_NOT_FOUND(3001, "Category not found"),
   CATEGORY_NAME_EXISTS(3002, "Category name already exists"),
   CATEGORY_HAS_ARTICLES(3003, "Cannot delete category containing articles"),
+  CATEGORY_CREATED(3004, "Category created successfully"),
+  CATEGORY_DELETED_SUCCESSFULLY(3005, "Category deleted successfully"),
+  CATEGORY_UPDATED_SUCCESSFULLY(3006, "Category updated successfully"),
+  CATEGORY_ID_CANNOT_BE_EMPTY(3007, "Category ID cannot be empty"),
+  CATEGORY_NAME_REQUIRED(3008, "Category name is required"),
+  CATEGORY_SLUG_REQUIRED(3009, "Category slug is required"),
+  CATEGORY_NAME_TOO_LONG(3010, "Category name must not exceed 50 characters"),
+  CATEGORY_SLUG_TOO_LONG(3011, "Category slug must not exceed 100 characters"),
+  CATEGORY_DESCRIPTION_TOO_LONG(3012, "Category description must not exceed 200 characters"),
+  CATEGORY_PARENT_NOT_FOUND(3013, "Parent category not found with ID: %s"),
+  CATEGORY_NAME_INVALID(3014, "Invalid category name"),
+  CATEGORY_SLUG_INVALID(3015, "Invalid category slug"),
+
+  // ==================== Column Errors ====================
+  COLUMN_NOT_FOUND(3101, "Column not found"),
+  COLUMN_NAME_EXISTS(3102, "Column name already exists"),
+  COLUMN_CREATED(3103, "Column created successfully"),
+  COLUMN_DELETED_SUCCESSFULLY(3104, "Column deleted successfully"),
+  COLUMN_UPDATED_SUCCESSFULLY(3105, "Column updated successfully"),
+  SERIES_NOT_FOUND(3101, "Series not found"),
+  SERIES_NAME_EXISTS(3102, "Series name already exists"),
+  SERIES_CREATED(3103, "Series created successfully"),
+  SERIES_DELETED_SUCCESSFULLY(3104, "Series deleted successfully"),
+  SERIES_UPDATED_SUCCESSFULLY(3105, "Series updated successfully"),
+  SERIES_ID_CANNOT_BE_EMPTY(3106, "Series ID cannot be empty"),
+  SERIES_NAME_REQUIRED(3107, "Series name is required"),
+  SERIES_SLUG_REQUIRED(3108, "Series slug is required"),
 
   // ==================== Tag Errors ====================
   TAG_NOT_FOUND(4001, "Tag not found"),
   TAG_NAME_EXISTS(4002, "Tag name already exists"),
+  TAG_SLUG_EXISTS(4003, "Tag slug already exists"),
+  TAG_CREATED(4004, "Tag created successfully"),
+  TAG_DELETED_SUCCESSFULLY(4005, "Tag deleted successfully"),
+  TAG_UPDATED_SUCCESSFULLY(4006, "Tag updated successfully"),
+  TAG_ID_CANNOT_BE_EMPTY(4007, "Tag ID cannot be empty"),
 
   // ==================== Role Errors ====================
   ROLE_NOT_FOUND(5001, "Role not found"),
