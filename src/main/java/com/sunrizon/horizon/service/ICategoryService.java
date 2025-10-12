@@ -5,6 +5,8 @@ import com.sunrizon.horizon.dto.UpdateCategoryRequest;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.CategoryVO;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -60,10 +62,18 @@ public interface ICategoryService {
     ResultResponse<CategoryVO> getCategoryByName(String name);
 
     /**
-     * Get a category by slug.
-     *
-     * @param slug category slug
-     * @return ResultResponse containing the CategoryVO if found
-     */
-    ResultResponse<CategoryVO> getCategoryBySlug(String slug);
+   * Get a category by slug.
+   *
+   * @param slug category slug
+   * @return ResultResponse containing the CategoryVO if found
+   */
+  ResultResponse<CategoryVO> getCategoryBySlug(String slug);
+
+  /**
+   * Get all categories (non-paginated).
+   *
+   * @return ResultResponse containing a list of all CategoryVO
+   */
+  ResultResponse<List<CategoryVO>> getAllCategories();
+}
 }

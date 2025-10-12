@@ -109,6 +109,16 @@ public class UserController {
     return userService.deleteUser(uid);
   }
 
+  /**
+   * Retrieve all users (non-paginated).
+   * 
+   * @return ResultResponse wrapping list of all UserVO
+   */
+  @GetMapping("/all")
+  public ResultResponse<java.util.List<UserVO>> getAllUsers() {
+    return userService.getAllUsers();
+  }
+
   @GetMapping
   public ResultResponse<Page<UserVO>> getUsers(Pageable pageable) {
     return userService.getUsers(pageable);

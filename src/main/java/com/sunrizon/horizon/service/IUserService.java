@@ -88,4 +88,11 @@ public interface IUserService {
    */
   ResultResponse<String> updateStatus(String uid, UserStatus status);
 
+  /**
+   * Get all users (non-paginated).
+   *
+   * @return ResultResponse containing a list of all UserVO
+   */
+  ResultResponse<java.util.List<UserVO>> getAllUsers();
+
 }

@@ -108,7 +108,7 @@ public class ArticleServiceImpl implements IArticleService {
 
     // Convert to VO and return
     ArticleVO articleVO = BeanUtil.copyProperties(savedArticle, ArticleVO.class);
-    return ResultResponse.success(ResponseCode.ARTICLE_CREATED, articleVO);
+    return ResultResponse.success(ResponseCode.SUCCESS, articleVO);
   }
 
   /**
@@ -123,5 +123,84 @@ public class ArticleServiceImpl implements IArticleService {
       return "";
     }
     return title.trim().toLowerCase().replaceAll("[^a-z0-9\\s-]", "").replaceAll("\\s+", "-");
+  }
+
+  /**
+   * Get a paginated list of articles.
+   *
+   * @param pageable Pagination and sorting info
+   * @return {@link ResultResponse} with paginated {@link ArticleVO} list
+   */
+  @Override
+  public ResultResponse<org.springframework.data.domain.Page<ArticleVO>> getArticles(
+      org.springframework.data.domain.Pageable pageable) {
+    // Fetch paginated articles
+    org.springframework.data.domain.Page<Article> articlePage = articleRepository.findAll(pageable);
+
+    // Map entity to VO
+    org.springframework.data.domain.Page<ArticleVO> voPage = articlePage
+        .map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
+
+    // Return response
+    return ResultResponse.success(voPage);
+  }
+
+  /**
+   * Get all articles (non-paginated).
+   *
+   * @return {@link ResultResponse} with list of all {@link ArticleVO}
+   */
+  @Override
+  public ResultResponse<List<ArticleVO>> getAllArticles() {
+    // Fetch all articles
+    List<Article> articles = articleRepository.findAll();
+
+    // Map entity to VO list
+    List<ArticleVO> voList = articles.stream()
+        .map(article -> BeanUtil.copyProperties(article, ArticleVO.class))
+        .collect(Collectors.toList());
+
+    // Return response
+    return ResultResponse.success(voList);
+  }
+
+  /**
+   * Get articles by a list of IDs.
+   *
+   * @param ids List of article IDs to find
+   * @return {@link ResultResponse} with list of {@link ArticleVO} matching the
+   *         IDs
+   */
+  @Override
+  public ResultResponse<List<ArticleVO>> getArticlesByIds(List<String> ids) {
+    // Fetch articles by IDs
+    List<Article> articles = articleRepository.findAllById(ids);
+
+    // Map entity to VO list
+    List<ArticleVO> voList = articles.stream()
+        .map(article -> BeanUtil.copyProperties(article, ArticleVO.class))
+        .collect(Collectors.toList());
+
+    // Return response
+    return ResultResponse.success(voList);
+  }
+
+  /**
+   * Get an article by its ID.
+   *
+   * @param id The article ID to find
+   * @return {@link ResultResponse} with {@link ArticleVO} matching the ID
+   */
+  @Override
+  public ResultResponse<ArticleVO> getArticleById(String id) {
+    // Fetch article by ID
+    Article article = articleRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
+
+    // Map entity to VO
+    ArticleVO articleVO = BeanUtil.copyProperties(article, ArticleVO.class);
+
+    // Return response
+    return ResultResponse.success(articleVO);
   }
 }

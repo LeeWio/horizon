@@ -369,6 +369,25 @@ public class UserServiceImpl implements IUserService {
   }
 
   /**
+   * Get all users (non-paginated).
+   *
+   * @return {@link ResultResponse} with list of all {@link UserVO}
+   */
+  @Override
+  public ResultResponse<java.util.List<UserVO>> getAllUsers() {
+    // Fetch all users
+    java.util.List<User> users = userRepository.findAll();
+
+    // Map entity to VO list
+    java.util.List<UserVO> voList = users.stream()
+        .map(user -> cn.hutool.core.bean.BeanUtil.copyProperties(user, UserVO.class))
+        .collect(java.util.stream.Collectors.toList());
+
+    // Return response
+    return ResultResponse.success(voList);
+  }
+
+  /**
    * TODO: 待实现
    * Update user details.
    *

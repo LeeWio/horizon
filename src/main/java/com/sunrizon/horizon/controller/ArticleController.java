@@ -1,5 +1,11 @@
 package com.sunrizon.horizon.controller;
 
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,18 +25,55 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ArticleController {
 
-    @Resource
-    private IArticleService articleService;
+  @Resource
+  private IArticleService articleService;
 
-    /**
-     * Create a new article.
-     *
-     * @param request DTO containing article creation data
-     * @return ResultResponse wrapping the created ArticleVO
-     */
-    @PostMapping("/create")
-    public ResultResponse<ArticleVO> createArticle(@Valid @RequestBody CreateArticleRequest request) {
-        return articleService.createArticle(request);
-    }
+  /**
+   * Create a new article.
+   *
+   * @param request DTO containing article creation data
+   * @return ResultResponse wrapping the created ArticleVO
+   */
+  @PostMapping("/create")
+  public ResultResponse<ArticleVO> createArticle(@Valid @RequestBody CreateArticleRequest request) {
+    return articleService.createArticle(request);
+  }
+
+  /**
+   * Retrieve all articles (non-paginated).
+   * 
+   * @return ResultResponse wrapping list of all ArticleVO
+   */
+  @GetMapping("/all")
+  public ResultResponse<List<ArticleVO>> getAllArticles() {
+    return articleService.getAllArticles();
+  }
+
+  /**
+   * Retrieve articles by a list of IDs.
+   * 
+   * @param ids List of article IDs to find
+   * @return ResultResponse wrapping list of ArticleVO matching the IDs
+   */
+  @PostMapping("/by-ids")
+  public ResultResponse<List<ArticleVO>> getArticlesByIds(@RequestBody List<String> ids) {
+    return articleService.getArticlesByIds(ids);
+  }
+
+  /**
+   * Retrieve an article by its ID.
+   * 
+   * @param id The article ID to find
+   * @return ResultResponse wrapping ArticleVO matching the ID
+   */
+  @GetMapping("/{id}")
+  public ResultResponse<ArticleVO> getArticleById(@PathVariable("id") String id) {
+    return articleService.getArticleById(id);
+  }
+
+  @GetMapping
+  public ResultResponse<Page<ArticleVO>> getArticles(Pageable pageable) {
+    return articleService.getArticles(pageable);
+  }
 
 }

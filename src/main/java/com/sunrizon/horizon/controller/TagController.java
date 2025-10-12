@@ -1,6 +1,7 @@
 package com.sunrizon.horizon.controller;
 
-import org.springframework.data.domain.Page;
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -85,8 +86,18 @@ public class TagController {
   }
 
   @GetMapping
-  public ResultResponse<Page<TagVO>> getTags(Pageable pageable) {
+  public ResultResponse<List<TagVO>> getTags(Pageable pageable) {
     return tagService.getTags(pageable);
+  }
+
+  /**
+   * Retrieve all tags (non-paginated).
+   * 
+   * @return ResultResponse wrapping list of all TagVO
+   */
+  @GetMapping("/all")
+  public ResultResponse<List<TagVO>> getAllTags() {
+    return tagService.getAllTags();
   }
 
 }

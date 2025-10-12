@@ -5,6 +5,8 @@ import com.sunrizon.horizon.dto.UpdateTagRequest;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.TagVO;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -32,7 +34,14 @@ public interface ITagService {
    * @param pageable pagination info (page number, size, sort)
    * @return ResultResponse containing a page of TagVO
    */
-  ResultResponse<Page<TagVO>> getTags(Pageable pageable);
+  ResultResponse<List<TagVO>> getTags(Pageable pageable);
+  
+  /**
+   * Get all tags (non-paginated).
+   *
+   * @return ResultResponse containing a list of all TagVO
+   */
+  ResultResponse<List<TagVO>> getAllTags();
 
   /**
    * Delete a tag by ID.

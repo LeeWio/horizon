@@ -16,6 +16,8 @@ import jakarta.annotation.Resource;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -101,15 +103,17 @@ public class TagServiceImpl implements ITagService {
    * @return {@link ResultResponse} with paginated {@link TagVO} list
    */
   @Override
-  public ResultResponse<Page<TagVO>> getTags(Pageable pageable) {
+  public ResultResponse<List<TagVO>> getTags(Pageable pageable) {
     // Fetch paginated tags
     Page<Tag> tagPage = tagRepository.findAll(pageable);
 
-    // Map entity to VO
-    Page<TagVO> voPage = tagPage.map(tag -> BeanUtil.copyProperties(tag, TagVO.class));
+    // Map entity to VO list
+    List<TagVO> voList = tagPage.getContent().stream()
+        .map(tag -> BeanUtil.copyProperties(tag, TagVO.class))
+        .collect(java.util.stream.Collectors.toList());
 
     // Return response
-    return ResultResponse.success(voPage);
+    return ResultResponse.success(voList);
   }
 
   /**
@@ -225,6 +229,25 @@ public class TagServiceImpl implements ITagService {
   }
 
   /**
+   * Get all tags (non-paginated).
+   *
+   * @return {@link ResultResponse} with list of all {@link TagVO}
+   */
+  @Override
+  public ResultResponse<List<TagVO>> getAllTags() {
+    // Fetch all tags
+    List<Tag> tags = tagRepository.findAll();
+
+    // Map entity to VO list
+    List<TagVO> voList = tags.stream()
+        .map(tag -> BeanUtil.copyProperties(tag, TagVO.class))
+        .collect(java.util.stream.Collectors.toList());
+
+    // Return response
+    return ResultResponse.success(voList);
+  }
+
+  /**
    * Generate a slug from a name by converting to lowercase and replacing spaces
    * with hyphens.
    *
@@ -233,8 +256,8 @@ public class TagServiceImpl implements ITagService {
    */
   private String generateSlugFromName(String name) {
     if (StrUtil.isBlank(name)) {
-      return "";
+      return \"\";
     }
-    return name.trim().toLowerCase().replaceAll("[^a-z0-9\\s-]", "").replaceAll("\\s+", "-");
+    return name.trim().toLowerCase().replaceAll(\"[^a-z0-9\\\\s-]\", \"\").replaceAll(\"\\\\s+\", \"-\");
   }
 }

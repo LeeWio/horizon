@@ -1,5 +1,7 @@
 package com.sunrizon.horizon.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -38,6 +40,11 @@ public class CategoryController {
   @PostMapping("/create")
   public ResultResponse<CategoryVO> createCategory(@Valid @RequestBody CreateCategoryRequest request) {
     return categoryService.createCategory(request);
+  }
+
+  @GetMapping("/all")
+  public ResultResponse<List<CategoryVO>> getAllCategories() {
+    return categoryService.getAllCategories();
   }
 
   /**
