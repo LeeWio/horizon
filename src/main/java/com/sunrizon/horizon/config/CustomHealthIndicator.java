@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
  * - File system access
  * - Critical business metrics
  */
-@Component("custom")
+@Component
 public class CustomHealthIndicator implements HealthIndicator {
 
   @Override
