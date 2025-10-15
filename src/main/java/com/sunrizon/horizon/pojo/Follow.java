@@ -15,7 +15,11 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "follow",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"follower_id", "following_id"}))
+    uniqueConstraints = @UniqueConstraint(columnNames = {"follower_id", "following_id"}),
+    indexes = {
+        @Index(name = "idx_follow_follower_id", columnList = "follower_id"),
+        @Index(name = "idx_follow_following_id", columnList = "following_id")
+    })
 @Setter
 @Getter
 @EntityListeners(AuditingEntityListener.class)

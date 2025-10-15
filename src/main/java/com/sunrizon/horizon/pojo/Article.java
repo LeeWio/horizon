@@ -16,7 +16,16 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-@Table(name = "article")
+@Table(name = "article", indexes = {
+    @Index(name = "idx_article_status", columnList = "status"),
+    @Index(name = "idx_article_author_id", columnList = "author_id"),
+    @Index(name = "idx_article_created_at", columnList = "created_at"),
+    @Index(name = "idx_article_view_count", columnList = "view_count"),
+    @Index(name = "idx_article_like_count", columnList = "like_count"),
+    @Index(name = "idx_article_favorite_count", columnList = "favorite_count"),
+    @Index(name = "idx_article_status_created_at", columnList = "status, created_at"),
+    @Index(name = "idx_article_status_view_count", columnList = "status, view_count")
+})
 @Entity
 @Setter
 @Getter

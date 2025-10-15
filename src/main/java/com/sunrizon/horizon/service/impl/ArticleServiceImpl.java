@@ -15,9 +15,11 @@ import com.sunrizon.horizon.repository.ArticleRepository;
 import com.sunrizon.horizon.repository.CategoryRepository;
 import com.sunrizon.horizon.repository.SeriesRepository;
 import com.sunrizon.horizon.repository.TagRepository;
+import com.sunrizon.horizon.constants.RedisContants;
 import com.sunrizon.horizon.service.IArticleService;
 import com.sunrizon.horizon.service.ICacheService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.XssUtil;
 import com.sunrizon.horizon.vo.ArticleVO;
 
 import jakarta.annotation.Resource;
@@ -86,6 +88,17 @@ public class ArticleServiceImpl implements IArticleService {
     // article.setAuthorId(request.getAuthorId());
 
     Article article = BeanUtil.copyProperties(request, Article.class);
+
+    // XSS防护：清理文章内容中的恶意代码
+    if (StrUtil.isNotBlank(article.getContent())) {
+      article.setContent(XssUtil.cleanArticle(article.getContent()));
+    }
+    if (StrUtil.isNotBlank(article.getSummary())) {
+      article.setSummary(XssUtil.cleanRelaxed(article.getSummary()));
+    }
+    if (StrUtil.isNotBlank(article.getTitle())) {
+      article.setTitle(XssUtil.cleanUserInput(article.getTitle()));
+    }
 
     // If slug is not provided, generate it from title
     if (StrUtil.isBlank(article.getSlug())) {
@@ -167,12 +180,12 @@ public class ArticleServiceImpl implements IArticleService {
       article.setSlug(request.getSlug());
     }
 
-    // 5. 更新其他字段
+    // 5. 更新其他字段（带XSS防护）
     if (StrUtil.isNotBlank(request.getSummary())) {
-      article.setSummary(request.getSummary());
+      article.setSummary(XssUtil.cleanRelaxed(request.getSummary()));
     }
     if (StrUtil.isNotBlank(request.getContent())) {
-      article.setContent(request.getContent());
+      article.setContent(XssUtil.cleanArticle(request.getContent()));
     }
     if (StrUtil.isNotBlank(request.getCoverImage())) {
       article.setCoverImage(request.getCoverImage());
@@ -209,8 +222,8 @@ public class ArticleServiceImpl implements IArticleService {
     articleRepository.saveAndFlush(article);
 
     // 10. 清除缓存
-    cacheService.evict("article:" + aid);
-    cacheService.evictByPattern("trending:*"); // 清除所有排行榜缓存
+    cacheService.evict(String.format(RedisContants.ARTICLE_CACHE_KEY_FORMAT, aid));
+    cacheService.evictByPattern(RedisContants.TRENDING_PATTERN); // 清除所有排行榜缓存
     log.info("已清除文章缓存: {}", aid);
 
     // 11. 返回响应
@@ -241,8 +254,8 @@ public class ArticleServiceImpl implements IArticleService {
     articleRepository.delete(article);
 
     // 4. 清除缓存
-    cacheService.evict("article:" + aid);
-    cacheService.evictByPattern("trending:*");
+    cacheService.evict(String.format(RedisContants.ARTICLE_CACHE_KEY_FORMAT, aid));
+    cacheService.evictByPattern(RedisContants.TRENDING_PATTERN);
     log.info("已清除已删除文章的缓存: {}", aid);
 
     // 5. 返回响应
@@ -319,8 +332,8 @@ public class ArticleServiceImpl implements IArticleService {
    */
   @Override
   public ResultResponse<ArticleVO> getArticleById(String id) {
-    // 缓存键
-    String cacheKey = "article:" + id;
+    // 缓存键：使用常量格式化
+    String cacheKey = String.format(RedisContants.ARTICLE_CACHE_KEY_FORMAT, id);
 
     // 从缓存获取，缓存未命中时查询数据库
     ArticleVO articleVO = cacheService.getWithFallback(
@@ -332,8 +345,8 @@ public class ArticleServiceImpl implements IArticleService {
               .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
           return BeanUtil.copyProperties(article, ArticleVO.class);
         },
-        10,
-        TimeUnit.MINUTES
+        RedisContants.CACHE_ARTICLE_TTL_SECONDS,
+        TimeUnit.SECONDS
     );
 
     return ResultResponse.success(articleVO);
@@ -350,8 +363,8 @@ public class ArticleServiceImpl implements IArticleService {
    */
   @Override
   public ResultResponse<Page<ArticleVO>> getTrendingByViews(String timeRange, Pageable pageable) {
-    // 缓存键：包含时间范围和分页信息
-    String cacheKey = String.format("trending:views:%s:page%d:size%d",
+    // 缓存键：使用常量格式化
+    String cacheKey = String.format(RedisContants.TRENDING_VIEWS_KEY_FORMAT,
         timeRange, pageable.getPageNumber(), pageable.getPageSize());
 
     // 从缓存获取
@@ -373,8 +386,8 @@ public class ArticleServiceImpl implements IArticleService {
 
           return articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
         },
-        5,
-        TimeUnit.MINUTES
+        RedisContants.CACHE_TRENDING_TTL_SECONDS,
+        TimeUnit.SECONDS
     );
 
     return ResultResponse.success(voPage);

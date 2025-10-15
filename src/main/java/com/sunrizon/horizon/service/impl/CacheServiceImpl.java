@@ -2,6 +2,7 @@ package com.sunrizon.horizon.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.json.JSONUtil;
+import com.sunrizon.horizon.constants.RedisContants;
 import com.sunrizon.horizon.service.ICacheService;
 import com.sunrizon.horizon.utils.RedisUtil;
 import jakarta.annotation.Resource;
@@ -33,17 +34,6 @@ public class CacheServiceImpl implements ICacheService {
   @Resource
   private RedisTemplate<String, Object> redisTemplate;
 
-  // 空值缓存标识
-  private static final String NULL_CACHE_VALUE = "NULL";
-  // 空值缓存时间（2分钟）
-  private static final long NULL_CACHE_TTL = 2;
-  // 锁前缀
-  private static final String LOCK_PREFIX = "lock:";
-  // 锁过期时间（10秒）
-  private static final long LOCK_TTL = 10;
-  // 默认缓存时间（10分钟）
-  private static final long DEFAULT_TTL = 10;
-
   /**
    * Lua脚本：获取分布式锁
    * 如果key不存在，则设置值并返回1（获取锁成功）
@@ -59,7 +49,8 @@ public class CacheServiceImpl implements ICacheService {
 
   @Override
   public <T> T getWithFallback(String key, Class<T> type, Supplier<T> dbFallback) {
-    return getWithFallback(key, type, dbFallback, DEFAULT_TTL, TimeUnit.MINUTES);
+    return getWithFallback(key, type, dbFallback, 
+        RedisContants.CACHE_ARTICLE_TTL_SECONDS, TimeUnit.SECONDS);
   }
 
   @Override
@@ -72,7 +63,7 @@ public class CacheServiceImpl implements ICacheService {
       String value = cachedValue.get();
 
       // 检查是否是空值缓存
-      if (NULL_CACHE_VALUE.equals(value)) {
+      if (RedisContants.CACHE_NULL_VALUE.equals(value)) {
         log.debug("命中空值缓存: {}", key);
         return null;
       }
@@ -98,7 +89,7 @@ public class CacheServiceImpl implements ICacheService {
    */
   private <T> T loadWithLock(String key, Class<T> type, Supplier<T> dbFallback,
                              long ttl, TimeUnit timeUnit) {
-    String lockKey = LOCK_PREFIX + key;
+    String lockKey = String.format(RedisContants.CACHE_LOCK_KEY_FORMAT, key);
 
     // 尝试获取锁
     boolean locked = tryLock(lockKey);
@@ -109,7 +100,7 @@ public class CacheServiceImpl implements ICacheService {
         Optional<String> cachedValue = redisUtil.get(key, String.class);
         if (cachedValue.isPresent()) {
           String value = cachedValue.get();
-          if (NULL_CACHE_VALUE.equals(value)) {
+          if (RedisContants.CACHE_NULL_VALUE.equals(value)) {
             return null;
           }
           return JSONUtil.toBean(value, type);
@@ -128,7 +119,8 @@ public class CacheServiceImpl implements ICacheService {
           log.debug("数据已缓存: {}, TTL: {}秒", key, randomTtl);
         } else {
           // 缓存空值，防止缓存穿透
-          redisUtil.set(key, NULL_CACHE_VALUE, NULL_CACHE_TTL, TimeUnit.MINUTES);
+          redisUtil.set(key, RedisContants.CACHE_NULL_VALUE, 
+              RedisContants.CACHE_NULL_TTL_SECONDS, TimeUnit.SECONDS);
           log.warn("缓存空值以防止穿透: {}", key);
         }
 
@@ -151,7 +143,7 @@ public class CacheServiceImpl implements ICacheService {
       Optional<String> cachedValue = redisUtil.get(key, String.class);
       if (cachedValue.isPresent()) {
         String value = cachedValue.get();
-        if (NULL_CACHE_VALUE.equals(value)) {
+        if (RedisContants.CACHE_NULL_VALUE.equals(value)) {
           return null;
         }
         return JSONUtil.toBean(value, type);
@@ -175,7 +167,7 @@ public class CacheServiceImpl implements ICacheService {
       Long result = redisTemplate.execute(
           script,
           Collections.singletonList(lockKey),
-          String.valueOf(LOCK_TTL),
+          String.valueOf(RedisContants.CACHE_LOCK_TTL_SECONDS),
           Thread.currentThread().getName()
       );
 

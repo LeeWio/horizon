@@ -11,7 +11,12 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-@Table(name = "comment")
+@Table(name = "comment", indexes = {
+    @Index(name = "idx_comment_article_id", columnList = "article_id"),
+    @Index(name = "idx_comment_user_id", columnList = "user_id"),
+    @Index(name = "idx_comment_parent_id", columnList = "parent_id"),
+    @Index(name = "idx_comment_created_at", columnList = "created_at")
+})
 @Entity
 @Setter
 @Getter

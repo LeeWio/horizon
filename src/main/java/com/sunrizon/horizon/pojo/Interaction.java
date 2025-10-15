@@ -16,7 +16,13 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "interaction",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"article_id", "user_id", "type"}))
+    uniqueConstraints = @UniqueConstraint(columnNames = {"article_id", "user_id", "type"}),
+    indexes = {
+        @Index(name = "idx_interaction_article_id", columnList = "article_id"),
+        @Index(name = "idx_interaction_user_id", columnList = "user_id"),
+        @Index(name = "idx_interaction_type", columnList = "type"),
+        @Index(name = "idx_interaction_user_type", columnList = "user_id, type")
+    })
 @Setter
 @Getter
 @EntityListeners(AuditingEntityListener.class)

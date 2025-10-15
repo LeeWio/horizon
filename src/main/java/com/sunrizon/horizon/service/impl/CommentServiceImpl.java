@@ -10,6 +10,7 @@ import com.sunrizon.horizon.repository.ArticleRepository;
 import com.sunrizon.horizon.repository.CommentRepository;
 import com.sunrizon.horizon.service.ICommentService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.XssUtil;
 import com.sunrizon.horizon.vo.CommentVO;
 
 import jakarta.annotation.Resource;
@@ -62,6 +63,11 @@ public class CommentServiceImpl implements ICommentService {
 
     // 3. DTO 转 Entity (使用 BeanUtil)
     Comment comment = BeanUtil.copyProperties(request, Comment.class);
+
+    // XSS防护：清理评论内容中的恶意代码
+    if (StrUtil.isNotBlank(comment.getContent())) {
+      comment.setContent(XssUtil.cleanUserInput(comment.getContent()));
+    }
 
     // 4. 保存数据
     Comment savedComment = commentRepository.save(comment);
