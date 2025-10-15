@@ -27,6 +27,7 @@ import com.sunrizon.horizon.dto.LoginUserRequest;
 import com.sunrizon.horizon.dto.UpdateUserRequest;
 import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.enums.UserStatus;
+import com.sunrizon.horizon.messaging.UserAuditMessage;
 import com.sunrizon.horizon.pojo.Role;
 import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.RoleRepository;
@@ -148,6 +149,27 @@ public class UserServiceImpl implements IUserService {
 
     // Save user
     User savedUser = userRepository.save(user);
+
+    // Send audit notification if user status is PENDING
+    if (savedUser.getStatus() == UserStatus.PENDING) {
+      try {
+        UserAuditMessage auditMessage = new UserAuditMessage(
+            savedUser.getUid(),
+            savedUser.getUsername(),
+            savedUser.getEmail(),
+            savedUser.getCreatedAt()
+        );
+        rabbitTemplate.convertAndSend(
+            RabbitContants.USER_AUDIT_EXCHANGE,
+            RabbitContants.USER_AUDIT_ROUTING_KEY,
+            auditMessage
+        );
+        log.info("User audit notification sent for user: {}", savedUser.getUid());
+      } catch (Exception e) {
+        log.error("Failed to send user audit notification for user: {}", savedUser.getUid(), e);
+        // Don't fail user registration if notification fails
+      }
+    }
 
     // Convert to VO and return
     UserVO userVO = BeanUtil.copyProperties(savedUser, UserVO.class);
@@ -553,6 +575,71 @@ public class UserServiceImpl implements IUserService {
     redisUtil.delete(redisKey);
 
     return ResultResponse.success(ResponseCode.PASSWORD_RESET_SUCCESS);
+  }
+
+  /**
+   * Audit a pending user (approve or reject).
+   * Allows admin to change user status from PENDING to ACTIVE (approve) or BANNED (reject).
+   *
+   * @param userId user ID to audit
+   * @param status target status (ACTIVE to approve, BANNED to reject)
+   * @param reason optional rejection reason
+   * @return ResultResponse with success or error message
+   */
+  @Override
+  @Transactional
+  public ResultResponse<String> auditUser(String userId, UserStatus status, String reason) {
+    // Validate inputs
+    if (StrUtil.isBlank(userId)) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "User ID is required");
+    }
+
+    if (status == null) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "Status is required");
+    }
+
+    // Only ACTIVE and BANNED are valid audit results
+    if (status != UserStatus.ACTIVE && status != UserStatus.BANNED) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "Audit status must be ACTIVE or BANNED");
+    }
+
+    // Find user
+    User user = userRepository.findById(userId)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + userId));
+
+    // Check if user is in PENDING status
+    if (user.getStatus() != UserStatus.PENDING) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, 
+          String.format("User is not pending audit. Current status: %s", user.getStatus()));
+    }
+
+    // Update user status
+    user.setStatus(status);
+    userRepository.saveAndFlush(user);
+
+    // Log audit action
+    String action = (status == UserStatus.ACTIVE) ? "approved" : "rejected";
+    log.info("User {} has been {} by admin. Reason: {}", userId, action, 
+        StrUtil.isNotBlank(reason) ? reason : "N/A");
+
+    // TODO: Send notification to user via email
+    // emailService.sendUserAuditResult(user.getEmail(), status, reason);
+
+    String message = String.format("User %s successfully", action);
+    return ResultResponse.success(ResponseCode.SUCCESS, message);
+  }
+
+  /**
+   * Get all pending users waiting for audit.
+   *
+   * @param pageable pagination info
+   * @return ResultResponse containing page of pending users
+   */
+  @Override
+  public ResultResponse<Page<UserVO>> getPendingUsers(Pageable pageable) {
+    Page<User> userPage = userRepository.findByStatus(UserStatus.PENDING, pageable);
+    Page<UserVO> userVOPage = userPage.map(user -> BeanUtil.copyProperties(user, UserVO.class));
+    return ResultResponse.success(ResponseCode.SUCCESS, userVOPage);
   }
 
 }

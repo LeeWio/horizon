@@ -3,6 +3,8 @@ package com.sunrizon.horizon.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -20,6 +22,9 @@ public interface UserRepository extends JpaRepository<User, String> {
 
   // Find all users with a specific status
   List<User> findAllByStatus(UserStatus status);
+
+  // Find users by status with pagination
+  Page<User> findByStatus(UserStatus status, Pageable pageable);
 
   // Find all users by role name (assuming User has a roles collection)
   List<User> findAllByRoles_Name(String roleName);

@@ -123,4 +123,23 @@ public interface IUserService {
    */
   ResultResponse<String> resetPassword(String email, String otp, String newPassword);
 
+  /**
+   * Audit a pending user (approve or reject).
+   * This method allows admins to review and approve/reject new user registrations.
+   *
+   * @param userId user ID to audit
+   * @param status target status (ACTIVE to approve, BANNED to reject)
+   * @param reason optional rejection reason
+   * @return ResultResponse with success or error message
+   */
+  ResultResponse<String> auditUser(String userId, UserStatus status, String reason);
+
+  /**
+   * Get all pending users waiting for audit.
+   *
+   * @param pageable pagination info
+   * @return ResultResponse containing page of pending users
+   */
+  ResultResponse<Page<UserVO>> getPendingUsers(Pageable pageable);
+
 }
