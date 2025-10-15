@@ -516,13 +516,15 @@
 
 ---
 
-### 20. 运维监控
+### 20. 运维监控 ✅ **核心功能已完成**
 
 **优先级**: ⚡ 中
 
 **功能点**:
-- [ ] 健康检查接口（完善 Actuator）
-- [ ] Prometheus 监控指标
+- [x] 健康检查接口（完善 Actuator） ✅
+- [x] Prometheus 监控指标 ✅
+- [x] 自定义健康检查指标 ✅
+- [x] 自定义业务指标 ✅
 - [ ] 日志聚合（ELK Stack）
 - [ ] 告警机制
 - [ ] 性能监控（APM）
@@ -530,10 +532,15 @@
 - [ ] 错误追踪（Sentry）
 
 **技术实现**:
-- 启用 Spring Boot Actuator
-- 集成 Prometheus + Grafana
-- 集成 ELK（Elasticsearch + Logstash + Kibana）
-- 集成 SkyWalking 链路追踪
+- ✅ 已启用 Spring Boot Actuator
+- ✅ 已集成 Micrometer Prometheus
+- ✅ 已创建 CustomHealthIndicator
+- ✅ 已创建 CustomMetrics（用户注册、文章创建、登录统计等）
+- ✅ 已配置 6 个 Actuator 端点（health, metrics, prometheus, info, env, loggers）
+- ✅ 共 118 个指标可用
+- 待集成 Prometheus + Grafana
+- 待集成 ELK（Elasticsearch + Logstash + Kibana）
+- 待集成 SkyWalking 链路追踪
 
 ---
 
@@ -571,14 +578,14 @@
 
 ### 💡 P2 - 中优先级（优化提升）
 
-1. **缓存优化**
-2. **安全增强**
-3. **性能优化**
-4. **运维监控**
-5. **内容审核**
-6. **SEO 优化**
+1. **缓存优化** - 待开发
+2. **安全增强** - 待开发
+3. **性能优化** - 待开发
+4. ✅ **运维监控** - 已完成 ✨ 新增
+5. **内容审核** - 待开发
+6. **SEO 优化** - 待开发
 
-**预计工期**: 2-3 周
+**预计工期**: 剩余 1.5-2 周
 
 ---
 
