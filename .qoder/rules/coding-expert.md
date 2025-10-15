@@ -685,30 +685,38 @@ public class CommentController {
 # 用户登录获取 Token
 curl -X POST "http://localhost:8080/api/user/authenticate" \
   -H "Content-Type: application/json" \
-  -d '{"email":"3499508634@qq.com","password":"Wei.Li.Laba00"}' \
-  -w "\n"
+  -d '{"email":"3499508634@qq.com","password":"Wei.Li.Laba01"}' | jq .
 
 # 响应示例
 {
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiJ9...",
-    "user": {...}
+    "authorization": "eyJhbGciOiJIUzI1NiJ9...",
+    "uid": "98f3d225-e397-490e-9918-b767e0119f65",
+    "email": "3499508634@qq.com",
+    "username": "wei.li.updated"
   },
-  "status": 200,
-  "message": "Request processed successfully"
+  "status": 10012,
+  "message": "Login successfully"
 }
 
 # 使用 Token 调用需要认证的接口
 curl -X POST "http://localhost:8080/api/interaction/like" \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
-  -d '{"articleId":"xxx"}' \
-  -w "\n"
+  -d '{"articleId":"xxx"}' | jq .
 ```
 
 **测试账号**：
 - Email: `3499508634@qq.com`
-- Password: `Wei.Li.Laba00`
+- Password: `Wei.Li.Laba01`
+- User ID: `98f3d225-e397-490e-9918-b767e0119f65`
+
+**获取 Token 的标准命令**：
+```bash
+curl -X POST "http://localhost:8080/api/user/authenticate" \
+  -H "Content-Type: application/json" \
+  -d '{"email":"3499508634@qq.com","password":"Wei.Li.Laba01"}' | jq .
+```
 
 #### 1. 启动项目
 
