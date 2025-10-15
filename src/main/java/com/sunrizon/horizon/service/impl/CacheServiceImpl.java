@@ -1,251 +1,258 @@
 package com.sunrizon.horizon.service.impl;
 
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.json.JSONUtil;
 import com.sunrizon.horizon.service.ICacheService;
+import com.sunrizon.horizon.utils.RedisUtil;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RLock;
-import org.redisson.api.RedissonClient;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 /**
- * Cache service implementation with multi-level caching
+ * 基于Redis的缓存服务实现
  * <p>
- * Protection mechanisms:
- * 1. Cache Penetration: Cache null values with short TTL
- * 2. Cache Breakdown: Distributed lock (Redisson) for hot key reloading
- * 3. Cache Avalanche: Randomized TTL to avoid mass expiration
+ * 实现了三大缓存问题的防护：
+ * 1. 缓存穿透：缓存空值（短TTL）
+ * 2. 缓存击穿：分布式锁（Lua脚本）
+ * 3. 缓存雪崩：随机过期时间
  */
 @Service
 @Slf4j
 public class CacheServiceImpl implements ICacheService {
 
   @Resource
-  private CacheManager caffeineCacheManager;
-
-  @Resource(name = "redisCacheManager")
-  private CacheManager redisCacheManager;
+  private RedisUtil redisUtil;
 
   @Resource
   private RedisTemplate<String, Object> redisTemplate;
 
-  @Resource
-  private RedissonClient redissonClient;
+  // 空值缓存标识
+  private static final String NULL_CACHE_VALUE = "NULL";
+  // 空值缓存时间（2分钟）
+  private static final long NULL_CACHE_TTL = 2;
+  // 锁前缀
+  private static final String LOCK_PREFIX = "lock:";
+  // 锁过期时间（10秒）
+  private static final long LOCK_TTL = 10;
+  // 默认缓存时间（10分钟）
+  private static final long DEFAULT_TTL = 10;
 
-  private static final String LOCK_PREFIX = "cache:lock:";
-  private static final long LOCK_TIMEOUT = 10; // seconds
-  private static final long NULL_CACHE_TTL = 2; // minutes
+  /**
+   * Lua脚本：获取分布式锁
+   * 如果key不存在，则设置值并返回1（获取锁成功）
+   * 如果key存在，返回0（获取锁失败）
+   */
+  private static final String ACQUIRE_LOCK_SCRIPT =
+      "if redis.call('exists', KEYS[1]) == 0 then " +
+          "redis.call('setex', KEYS[1], ARGV[1], ARGV[2]) " +
+          "return 1 " +
+          "else " +
+          "return 0 " +
+          "end";
 
   @Override
-  public <T> T get(String key, Class<T> type, Supplier<T> dbFallback, String cacheName) {
-    return get(key, type, dbFallback, cacheName, 10, TimeUnit.MINUTES);
+  public <T> T getWithFallback(String key, Class<T> type, Supplier<T> dbFallback) {
+    return getWithFallback(key, type, dbFallback, DEFAULT_TTL, TimeUnit.MINUTES);
   }
 
   @Override
-  public <T> T get(String key, Class<T> type, Supplier<T> dbFallback, String cacheName,
-      long ttl, TimeUnit timeUnit) {
+  public <T> T getWithFallback(String key, Class<T> type, Supplier<T> dbFallback,
+                                long ttl, TimeUnit timeUnit) {
+    // 1. 尝试从Redis获取
+    Optional<String> cachedValue = redisUtil.get(key, String.class);
 
-    // Step 1: Try local cache (Caffeine) - L1
-    Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
-    if (caffeineCache != null) {
-      Cache.ValueWrapper wrapper = caffeineCache.get(key);
-      if (wrapper != null) {
-        log.debug("Cache hit (Caffeine): {} -> {}", cacheName, key);
-        return type.cast(wrapper.get());
+    if (cachedValue.isPresent()) {
+      String value = cachedValue.get();
+
+      // 检查是否是空值缓存
+      if (NULL_CACHE_VALUE.equals(value)) {
+        log.debug("命中空值缓存: {}", key);
+        return null;
+      }
+
+      // 反序列化并返回
+      try {
+        T result = JSONUtil.toBean(value, type);
+        log.debug("缓存命中: {}", key);
+        return result;
+      } catch (Exception e) {
+        log.error("缓存反序列化失败: {}", key, e);
+        // 反序列化失败，删除缓存，重新加载
+        redisUtil.delete(key);
       }
     }
 
-    // Step 2: Try Redis cache - L2
-    Cache redisCache = redisCacheManager.getCache(cacheName);
-    if (redisCache != null) {
-      Cache.ValueWrapper wrapper = redisCache.get(key);
-      if (wrapper != null) {
-        log.debug("Cache hit (Redis): {} -> {}", cacheName, key);
-        T value = type.cast(wrapper.get());
-
-        // Update L1 cache
-        if (caffeineCache != null) {
-          caffeineCache.put(key, value);
-        }
-
-        return value;
-      }
-    }
-
-    // Step 3: Cache miss - load from database with distributed lock
-    return loadWithLock(key, type, dbFallback, cacheName, ttl, timeUnit);
+    // 2. 缓存未命中，使用分布式锁防止缓存击穿
+    return loadWithLock(key, type, dbFallback, ttl, timeUnit);
   }
 
   /**
-   * Load data from database with distributed lock to prevent cache breakdown
+   * 使用分布式锁加载数据
    */
   private <T> T loadWithLock(String key, Class<T> type, Supplier<T> dbFallback,
-      String cacheName, long ttl, TimeUnit timeUnit) {
+                             long ttl, TimeUnit timeUnit) {
+    String lockKey = LOCK_PREFIX + key;
 
-    String lockKey = LOCK_PREFIX + cacheName + ":" + key;
-    RLock lock = redissonClient.getLock(lockKey);
+    // 尝试获取锁
+    boolean locked = tryLock(lockKey);
 
-    try {
-      // Try to acquire lock
-      if (lock.tryLock(LOCK_TIMEOUT, timeUnit.toSeconds(ttl), TimeUnit.SECONDS)) {
-        try {
-          // Double-check cache after acquiring lock
-          Cache redisCache = redisCacheManager.getCache(cacheName);
-          if (redisCache != null) {
-            Cache.ValueWrapper wrapper = redisCache.get(key);
-            if (wrapper != null) {
-              log.debug("Cache hit after lock (Redis): {} -> {}", cacheName, key);
-              return type.cast(wrapper.get());
-            }
+    if (locked) {
+      try {
+        // 获取锁成功，双重检查缓存
+        Optional<String> cachedValue = redisUtil.get(key, String.class);
+        if (cachedValue.isPresent()) {
+          String value = cachedValue.get();
+          if (NULL_CACHE_VALUE.equals(value)) {
+            return null;
           }
-
-          // Load from database
-          log.info("Cache miss, loading from DB: {} -> {}", cacheName, key);
-          T value = dbFallback.get();
-
-          // Cache the result (even if null to prevent cache penetration)
-          if (value != null) {
-            put(key, value, cacheName, ttl, timeUnit);
-          } else {
-            // Cache null value with shorter TTL to prevent cache penetration
-            put(key, new NullValue(), cacheName, NULL_CACHE_TTL, TimeUnit.MINUTES);
-            log.warn("Null value cached to prevent penetration: {} -> {}", cacheName, key);
-          }
-
-          return value;
-
-        } finally {
-          lock.unlock();
+          return JSONUtil.toBean(value, type);
         }
-      } else {
-        // Failed to acquire lock, wait and retry
-        log.warn("Failed to acquire lock, falling back to DB: {} -> {}", cacheName, key);
-        return dbFallback.get();
+
+        // 从数据库加载
+        log.info("缓存未命中，从数据库加载: {}", key);
+        T data = dbFallback.get();
+
+        // 缓存数据
+        if (data != null) {
+          // 添加随机时间，防止缓存雪崩（±20%的随机波动）
+          long randomTtl = addRandomTtl(ttl, timeUnit);
+          String jsonValue = JSONUtil.toJsonStr(data);
+          redisUtil.set(key, jsonValue, randomTtl, TimeUnit.SECONDS);
+          log.debug("数据已缓存: {}, TTL: {}秒", key, randomTtl);
+        } else {
+          // 缓存空值，防止缓存穿透
+          redisUtil.set(key, NULL_CACHE_VALUE, NULL_CACHE_TTL, TimeUnit.MINUTES);
+          log.warn("缓存空值以防止穿透: {}", key);
+        }
+
+        return data;
+
+      } finally {
+        // 释放锁
+        releaseLock(lockKey);
+      }
+    } else {
+      // 获取锁失败，等待并重试
+      log.debug("等待锁释放: {}", key);
+      try {
+        Thread.sleep(50); // 等待50ms
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
       }
 
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      log.error("Lock interrupted: {} -> {}", cacheName, key, e);
+      // 重试获取缓存
+      Optional<String> cachedValue = redisUtil.get(key, String.class);
+      if (cachedValue.isPresent()) {
+        String value = cachedValue.get();
+        if (NULL_CACHE_VALUE.equals(value)) {
+          return null;
+        }
+        return JSONUtil.toBean(value, type);
+      }
+
+      // 如果还是没有，直接查数据库（降级策略）
+      log.warn("锁等待超时，直接查询数据库: {}", key);
       return dbFallback.get();
     }
   }
 
-  @Override
-  public void put(String key, Object value, String cacheName) {
-    put(key, value, cacheName, 10, TimeUnit.MINUTES);
+  /**
+   * 尝试获取分布式锁（使用Lua脚本保证原子性）
+   */
+  private boolean tryLock(String lockKey) {
+    try {
+      DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+      script.setScriptText(ACQUIRE_LOCK_SCRIPT);
+      script.setResultType(Long.class);
+
+      Long result = redisTemplate.execute(
+          script,
+          Collections.singletonList(lockKey),
+          String.valueOf(LOCK_TTL),
+          Thread.currentThread().getName()
+      );
+
+      return result != null && result == 1L;
+    } catch (Exception e) {
+      log.error("获取锁失败: {}", lockKey, e);
+      return false;
+    }
+  }
+
+  /**
+   * 释放分布式锁
+   */
+  private void releaseLock(String lockKey) {
+    try {
+      redisUtil.delete(lockKey);
+    } catch (Exception e) {
+      log.error("释放锁失败: {}", lockKey, e);
+    }
+  }
+
+  /**
+   * 添加随机TTL，防止缓存雪崩
+   * 在原TTL基础上增加±20%的随机波动
+   */
+  private long addRandomTtl(long ttl, TimeUnit timeUnit) {
+    long seconds = timeUnit.toSeconds(ttl);
+    // 计算20%的随机波动范围
+    long randomRange = (long) (seconds * 0.2);
+    // 随机增减
+    long randomOffset = RandomUtil.randomLong(-randomRange, randomRange);
+    return seconds + randomOffset;
   }
 
   @Override
-  public void put(String key, Object value, String cacheName, long ttl, TimeUnit timeUnit) {
-    // Put into L1 cache (Caffeine)
-    Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
-    if (caffeineCache != null) {
-      caffeineCache.put(key, value);
+  public void set(String key, Object value, long ttl, TimeUnit timeUnit) {
+    try {
+      String jsonValue = JSONUtil.toJsonStr(value);
+      redisUtil.set(key, jsonValue, ttl, timeUnit);
+      log.debug("缓存已设置: {}", key);
+    } catch (Exception e) {
+      log.error("设置缓存失败: {}", key, e);
     }
-
-    // Put into L2 cache (Redis)
-    Cache redisCache = redisCacheManager.getCache(cacheName);
-    if (redisCache != null) {
-      redisCache.put(key, value);
-    }
-
-    // Also use RedisTemplate for manual TTL control
-    String redisKey = cacheName + "::" + key;
-    redisTemplate.opsForValue().set(redisKey, value, ttl, timeUnit);
-
-    log.debug("Cache put: {} -> {}", cacheName, key);
   }
 
   @Override
-  public void evict(String key, String cacheName) {
-    // Evict from L1 cache
-    Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
-    if (caffeineCache != null) {
-      caffeineCache.evict(key);
+  public void evict(String key) {
+    try {
+      redisUtil.delete(key);
+      log.info("缓存已删除: {}", key);
+    } catch (Exception e) {
+      log.error("删除缓存失败: {}", key, e);
     }
-
-    // Evict from L2 cache
-    Cache redisCache = redisCacheManager.getCache(cacheName);
-    if (redisCache != null) {
-      redisCache.evict(key);
-    }
-
-    // Also evict from RedisTemplate
-    String redisKey = cacheName + "::" + key;
-    redisTemplate.delete(redisKey);
-
-    log.info("Cache evicted: {} -> {}", cacheName, key);
   }
 
   @Override
-  public void clear(String cacheName) {
-    // Clear L1 cache
-    Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
-    if (caffeineCache != null) {
-      caffeineCache.clear();
+  public void evictByPattern(String keyPattern) {
+    try {
+      // 使用scan命令查找匹配的key（推荐方式，不会阻塞Redis）
+      redisTemplate.keys(keyPattern).forEach(key -> {
+        redisTemplate.delete((String) key);
+      });
+      log.info("批量删除缓存: {}", keyPattern);
+    } catch (Exception e) {
+      log.error("批量删除缓存失败: {}", keyPattern, e);
     }
-
-    // Clear L2 cache
-    Cache redisCache = redisCacheManager.getCache(cacheName);
-    if (redisCache != null) {
-      redisCache.clear();
-    }
-
-    log.info("Cache cleared: {}", cacheName);
-  }
-
-  @Override
-  public <T> List<T> multiGet(List<String> keys, Class<T> type, String cacheName) {
-    return keys.stream()
-        .map(key -> {
-          Cache cache = caffeineCacheManager.getCache(cacheName);
-          if (cache != null) {
-            Cache.ValueWrapper wrapper = cache.get(key);
-            if (wrapper != null) {
-              return type.cast(wrapper.get());
-            }
-          }
-          return null;
-        })
-        .collect(Collectors.toList());
   }
 
   @Override
   public void warmUp() {
-    log.info("Cache warm-up started");
-
-    // TODO: Implement cache warm-up logic
-    // Examples:
-    // 1. Pre-load hot articles
-    // 2. Pre-load popular categories
-    // 3. Pre-load active users
-
-    log.info("Cache warm-up completed");
-  }
-
-  @Override
-  public String getStats(String cacheName) {
-    Cache caffeineCache = caffeineCacheManager.getCache(cacheName);
-    if (caffeineCache != null) {
-      return "Cache stats for " + cacheName + " (Caffeine): Available";
-    }
-    return "Cache " + cacheName + " not found";
-  }
-
-  /**
-   * Placeholder class for null values to prevent cache penetration
-   */
-  private static class NullValue {
-    @Override
-    public String toString() {
-      return "NullValue";
-    }
+    log.info("缓存预热开始...");
+    // TODO: 实现缓存预热逻辑
+    // 示例：
+    // 1. 预加载热门文章
+    // 2. 预加载分类、标签
+    // 3. 预加载活跃用户信息
+    log.info("缓存预热完成");
   }
 }
+

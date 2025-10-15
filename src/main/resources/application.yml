@@ -120,27 +120,6 @@ info:
     java:
       version: ${java.version:24}
 
-# Resilience4j Rate Limiting configuration
-resilience4j:
-  ratelimiter:
-    instances:
-      default:
-        limitForPeriod: 100            # Number of requests allowed per period
-        limitRefreshPeriod: 1s         # Period duration
-        timeoutDuration: 0s            # Wait time for permission (0 = fail immediately)
-      api:
-        limitForPeriod: 50             # API endpoints: 50 requests per second
-        limitRefreshPeriod: 1s
-        timeoutDuration: 0s
-      login:
-        limitForPeriod: 5              # Login endpoint: 5 attempts per minute
-        limitRefreshPeriod: 1m
-        timeoutDuration: 0s
-      registration:
-        limitForPeriod: 3              # Registration: 3 attempts per minute
-        limitRefreshPeriod: 1m
-        timeoutDuration: 0s
-
 # 可选 OpenAPI / Swagger 配置
 # springdoc:
 #   api-docs:

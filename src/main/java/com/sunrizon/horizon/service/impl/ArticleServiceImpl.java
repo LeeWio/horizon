@@ -209,9 +209,9 @@ public class ArticleServiceImpl implements IArticleService {
     articleRepository.saveAndFlush(article);
 
     // 10. 清除缓存
-    cacheService.evict("article:" + aid, "article");
-    cacheService.clear("hotArticles"); // Clear hot articles cache
-    log.info("Cache cleared for article: {}", aid);
+    cacheService.evict("article:" + aid);
+    cacheService.evictByPattern("trending:*"); // 清除所有排行榜缓存
+    log.info("已清除文章缓存: {}", aid);
 
     // 11. 返回响应
     return ResultResponse.success(ResponseCode.ARTICLE_UPDATED_SUCCESSFULLY);
@@ -220,7 +220,7 @@ public class ArticleServiceImpl implements IArticleService {
   /**
    * Delete an article by ID.
    * <p>
-   * Clears cache after deletion
+   * 删除后清除相关缓存
    *
    * @param aid Article ID
    * @return {@link ResultResponse} with success or error message
@@ -241,9 +241,9 @@ public class ArticleServiceImpl implements IArticleService {
     articleRepository.delete(article);
 
     // 4. 清除缓存
-    cacheService.evict("article:" + aid, "article");
-    cacheService.clear("hotArticles");
-    log.info("Cache cleared after deleting article: {}", aid);
+    cacheService.evict("article:" + aid);
+    cacheService.evictByPattern("trending:*");
+    log.info("已清除已删除文章的缓存: {}", aid);
 
     // 5. 返回响应
     return ResultResponse.success(ResponseCode.ARTICLE_DELETED_SUCCESSFULLY);
@@ -312,36 +312,37 @@ public class ArticleServiceImpl implements IArticleService {
   /**
    * Get an article by its ID.
    * <p>
-   * Uses multi-level caching: Caffeine (L1) -> Redis (L2) -> Database
+   * 使用Redis缓存，TTL为10分钟
    *
    * @param id The article ID to find
    * @return {@link ResultResponse} with {@link ArticleVO} matching the ID
    */
   @Override
   public ResultResponse<ArticleVO> getArticleById(String id) {
-    // Try to get from cache first
+    // 缓存键
     String cacheKey = "article:" + id;
-    ArticleVO cachedArticle = cacheService.get(
+
+    // 从缓存获取，缓存未命中时查询数据库
+    ArticleVO articleVO = cacheService.getWithFallback(
         cacheKey,
         ArticleVO.class,
         () -> {
-          // Cache miss - load from database
+          // 数据库回调
           Article article = articleRepository.findById(id)
               .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
           return BeanUtil.copyProperties(article, ArticleVO.class);
         },
-        "article",
         10,
         TimeUnit.MINUTES
     );
 
-    return ResultResponse.success(cachedArticle);
+    return ResultResponse.success(articleVO);
   }
 
   /**
    * Get trending articles by view count.
    * <p>
-   * Uses caching with 5-minute TTL for hot article rankings
+   * 使用Redis缓存，TTL为5分钟（热门文章排行更新频率较高）
    *
    * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
    * @param pageable  Pagination info
@@ -349,14 +350,16 @@ public class ArticleServiceImpl implements IArticleService {
    */
   @Override
   public ResultResponse<Page<ArticleVO>> getTrendingByViews(String timeRange, Pageable pageable) {
+    // 缓存键：包含时间范围和分页信息
     String cacheKey = String.format("trending:views:%s:page%d:size%d",
         timeRange, pageable.getPageNumber(), pageable.getPageSize());
 
-    // Use cache for hot article rankings
-    Page<ArticleVO> cachedPage = cacheService.get(
+    // 从缓存获取
+    Page<ArticleVO> voPage = cacheService.getWithFallback(
         cacheKey,
         Page.class,
         () -> {
+          // 数据库回调
           LocalDateTime startDate = calculateStartDate(timeRange);
           Page<Article> articlePage;
 
@@ -370,12 +373,11 @@ public class ArticleServiceImpl implements IArticleService {
 
           return articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
         },
-        "hotArticles",
         5,
         TimeUnit.MINUTES
     );
 
-    return ResultResponse.success(cachedPage);
+    return ResultResponse.success(voPage);
   }
 
   /**

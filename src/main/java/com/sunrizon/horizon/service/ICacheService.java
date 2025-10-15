@@ -1,107 +1,68 @@
 package com.sunrizon.horizon.service;
 
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 /**
- * Cache service interface
+ * 缓存服务接口
  * <p>
- * Provides unified cache operations with multi-level caching strategy
- * and protection against cache penetration, breakdown, and avalanche.
+ * 基于Redis实现的缓存服务，提供：
+ * - 缓存穿透防护（缓存空值）
+ * - 缓存击穿防护（分布式锁）
+ * - 缓存雪崩防护（随机过期时间）
  */
 public interface ICacheService {
 
   /**
-   * Get value from cache with fallback to database
-   * <p>
-   * Cache strategy:
-   * 1. Try local cache (Caffeine) first
-   * 2. If miss, try Redis cache
-   * 3. If still miss, load from database and cache the result
+   * 从缓存获取数据，如果不存在则从数据库加载
    *
-   * @param key          Cache key
-   * @param type         Value type class
-   * @param dbFallback   Database fallback function (called if cache miss)
-   * @param cacheName    Cache name for categorization
-   * @param <T>          Value type
-   * @return Cached or loaded value
+   * @param key        缓存键
+   * @param type       返回值类型
+   * @param dbFallback 数据库回调函数
+   * @param ttl        过期时间
+   * @param timeUnit   时间单位
+   * @param <T>        返回值类型
+   * @return 缓存或数据库中的数据
    */
-  <T> T get(String key, Class<T> type, Supplier<T> dbFallback, String cacheName);
+  <T> T getWithFallback(String key, Class<T> type, Supplier<T> dbFallback, long ttl, TimeUnit timeUnit);
 
   /**
-   * Get value with custom TTL
+   * 从缓存获取数据，使用默认过期时间（10分钟）
    *
-   * @param key          Cache key
-   * @param type         Value type class
-   * @param dbFallback   Database fallback function
-   * @param cacheName    Cache name
-   * @param ttl          Time to live
-   * @param timeUnit     Time unit
-   * @param <T>          Value type
-   * @return Cached or loaded value
+   * @param key        缓存键
+   * @param type       返回值类型
+   * @param dbFallback 数据库回调函数
+   * @param <T>        返回值类型
+   * @return 缓存或数据库中的数据
    */
-  <T> T get(String key, Class<T> type, Supplier<T> dbFallback, String cacheName,
-      long ttl, TimeUnit timeUnit);
+  <T> T getWithFallback(String key, Class<T> type, Supplier<T> dbFallback);
 
   /**
-   * Put value into cache
+   * 设置缓存
    *
-   * @param key       Cache key
-   * @param value     Value to cache
-   * @param cacheName Cache name
+   * @param key      缓存键
+   * @param value    缓存值
+   * @param ttl      过期时间
+   * @param timeUnit 时间单位
    */
-  void put(String key, Object value, String cacheName);
+  void set(String key, Object value, long ttl, TimeUnit timeUnit);
 
   /**
-   * Put value with custom TTL
+   * 删除缓存
    *
-   * @param key       Cache key
-   * @param value     Value to cache
-   * @param cacheName Cache name
-   * @param ttl       Time to live
-   * @param timeUnit  Time unit
+   * @param key 缓存键
    */
-  void put(String key, Object value, String cacheName, long ttl, TimeUnit timeUnit);
+  void evict(String key);
 
   /**
-   * Evict specific key from cache
+   * 删除指定前缀的所有缓存
    *
-   * @param key       Cache key
-   * @param cacheName Cache name
+   * @param keyPattern 缓存键模式（如 "article:*"）
    */
-  void evict(String key, String cacheName);
+  void evictByPattern(String keyPattern);
 
   /**
-   * Clear all entries in a cache
-   *
-   * @param cacheName Cache name
-   */
-  void clear(String cacheName);
-
-  /**
-   * Get multiple values from cache
-   *
-   * @param keys      List of cache keys
-   * @param type      Value type class
-   * @param cacheName Cache name
-   * @param <T>       Value type
-   * @return List of values (null if not found)
-   */
-  <T> List<T> multiGet(List<String> keys, Class<T> type, String cacheName);
-
-  /**
-   * Warm up cache with hot data
-   * <p>
-   * Pre-loads frequently accessed data into cache to improve performance
+   * 缓存预热
    */
   void warmUp();
-
-  /**
-   * Get cache statistics
-   *
-   * @param cacheName Cache name
-   * @return Cache statistics as string
-   */
-  String getStats(String cacheName);
 }
