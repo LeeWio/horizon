@@ -68,6 +68,21 @@ public class Article implements Serializable {
   @Column(name = "updated_by", nullable = false)
   private String updatedBy;
 
+  @Column(name = "is_featured")
+  private Boolean isFeatured = false;
+
+  @Column(name = "view_count", nullable = false)
+  private Long viewCount = 0L;
+
+  @Column(name = "like_count", nullable = false)
+  private Long likeCount = 0L;
+
+  @Column(name = "favorite_count", nullable = false)
+  private Long favoriteCount = 0L;
+
+  @Column(name = "share_count", nullable = false)
+  private Long shareCount = 0L;
+
   /** Categories associated with this article */
   @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })
   @JoinTable(name = "article_category", joinColumns = @JoinColumn(name = "aid", referencedColumnName = "aid"), inverseJoinColumns = @JoinColumn(name = "cid", referencedColumnName = "id"))

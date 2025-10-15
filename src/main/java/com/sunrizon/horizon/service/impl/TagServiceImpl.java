@@ -256,8 +256,8 @@ public class TagServiceImpl implements ITagService {
    */
   private String generateSlugFromName(String name) {
     if (StrUtil.isBlank(name)) {
-      return \"\";
+      return "";
     }
-    return name.trim().toLowerCase().replaceAll(\"[^a-z0-9\\\\s-]\", \"\").replaceAll(\"\\\\s+\", \"-\");
+    return name.trim().toLowerCase().replaceAll("[^a-z0-9\\s-]", "").replaceAll("\\s+", "-");
   }
 }

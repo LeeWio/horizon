@@ -44,6 +44,12 @@ public class User implements Serializable {
   @Column(name = "status", nullable = false, length = 20)
   private UserStatus status = UserStatus.PENDING;
 
+  @Column(name = "following_count", nullable = false)
+  private Long followingCount = 0L;
+
+  @Column(name = "followers_count", nullable = false)
+  private Long followersCount = 0L;
+
   @CreatedDate
   @Column(name = "created_at", updatable = false)
   private LocalDateTime createdAt;

@@ -32,6 +32,9 @@ public class Tag implements Serializable {
   @Column(name = "slug", length = 100, unique = true)
   private String slug;
 
+  @Column(name = "icon", nullable = false)
+  private String icon;
+
   @Column(name = "description", length = 200)
   private String description;
 

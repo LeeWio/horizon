@@ -49,6 +49,9 @@ public enum ResponseCode {
   ARTICLE_TITLE_EXISTS(2004, "Article title already exists"),
   ARTICLE_SLUG_EXISTS(2005, "Article slug already exists"),
   ARTICLE_CREATED(2006, "Article created successfully"),
+  ARTICLE_UPDATED_SUCCESSFULLY(2007, "Article updated successfully"),
+  ARTICLE_DELETED_SUCCESSFULLY(2008, "Article deleted successfully"),
+  ARTICLE_ID_CANNOT_BE_EMPTY(2009, "Article ID cannot be empty"),
 
   // ==================== Category Errors ====================
   CATEGORY_NOT_FOUND(3001, "Category not found"),
@@ -105,6 +108,10 @@ public enum ResponseCode {
   FILE_UPLOAD_FAILED(7002, "File upload failed"),
   FILE_TYPE_NOT_SUPPORTED(7003, "Unsupported file type"),
   FILE_SIZE_EXCEEDED(7004, "File size exceeds limit"),
+  FILE_UPLOAD_SUCCESS(7005, "File uploaded successfully"),
+  FILE_DELETED_SUCCESSFULLY(7006, "File deleted successfully"),
+  FILE_IS_EMPTY(7007, "File is empty"),
+  FILE_ID_CANNOT_BE_EMPTY(7008, "File ID cannot be empty"),
 
   // ==================== External Services ====================
   EMAIL_SEND_FAILED(8001, "Failed to send email"),
@@ -144,7 +151,36 @@ public enum ResponseCode {
   // ==================== OTP Verification ====================
   INVALID_OTP(9401, "Invalid OTP code"),
   OTP_EXPIRED(9402, "OTP code has expired"),
-  OTP_VERIFIED(9403, "OTP verified successfully");
+  OTP_VERIFIED(9403, "OTP verified successfully"),
+
+  // ==================== Comment Errors ====================
+  COMMENT_NOT_FOUND(10001, "Comment not found"),
+  COMMENT_CREATED(10002, "Comment created successfully"),
+  COMMENT_DELETED_SUCCESSFULLY(10003, "Comment deleted successfully"),
+  COMMENT_ID_CANNOT_BE_EMPTY(10004, "Comment ID cannot be empty"),
+  COMMENT_ARTICLE_NOT_FOUND(10005, "Article not found for comment"),
+  COMMENT_PARENT_NOT_FOUND(10006, "Parent comment not found"),
+
+  // ==================== Statistics Errors ====================
+  READING_RECORDED(10101, "Reading recorded successfully"),
+  STATS_NOT_FOUND(10102, "Statistics not found"),
+
+  // ==================== Interaction Errors ====================
+  ARTICLE_LIKED(10201, "Article liked successfully"),
+  ARTICLE_UNLIKED(10202, "Article unliked successfully"),
+  ARTICLE_FAVORITED(10203, "Article favorited successfully"),
+  ARTICLE_UNFAVORITED(10204, "Article unfavorited successfully"),
+  ARTICLE_SHARED(10205, "Article shared successfully"),
+  INTERACTION_ALREADY_EXISTS(10206, "Interaction already exists"),
+  INTERACTION_NOT_FOUND(10207, "Interaction not found"),
+
+  // ==================== Follow Errors ====================
+  USER_FOLLOWED(10301, "User followed successfully"),
+  USER_UNFOLLOWED(10302, "User unfollowed successfully"),
+  ALREADY_FOLLOWING(10303, "Already following this user"),
+  NOT_FOLLOWING(10304, "Not following this user"),
+  CANNOT_FOLLOW_SELF(10305, "Cannot follow yourself"),
+  FOLLOW_USER_NOT_FOUND(10306, "User to follow not found");
 
   private final int status;
   private final String message;

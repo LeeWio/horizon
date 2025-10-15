@@ -1,6 +1,7 @@
 package com.sunrizon.horizon.service;
 
 import com.sunrizon.horizon.dto.CreateArticleRequest;
+import com.sunrizon.horizon.dto.UpdateArticleRequest;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.ArticleVO;
 
@@ -18,6 +19,23 @@ public interface IArticleService {
    * @return ResultResponse containing the created ArticleVO
    */
   ResultResponse<ArticleVO> createArticle(CreateArticleRequest request);
+
+  /**
+   * Update an existing article.
+   *
+   * @param aid     Article ID
+   * @param request DTO with article update info
+   * @return ResultResponse containing success or error message
+   */
+  ResultResponse<String> updateArticle(String aid, UpdateArticleRequest request);
+
+  /**
+   * Delete an article by ID.
+   *
+   * @param aid Article ID
+   * @return ResultResponse containing success or error message
+   */
+  ResultResponse<String> deleteArticle(String aid);
 
   /**
    * Get a paginated list of articles.

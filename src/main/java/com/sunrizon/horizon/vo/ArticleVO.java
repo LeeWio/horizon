@@ -20,6 +20,8 @@ public class ArticleVO {
     private String updatedBy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean isFeatured;
+    private Long viewCount;
     private List<CategoryVO> categories;
     private List<SeriesVO> series;
     private List<TagVO> tags;

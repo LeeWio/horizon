@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.sunrizon.horizon.dto.CreateArticleRequest;
+import com.sunrizon.horizon.dto.UpdateArticleRequest;
 import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.pojo.Article;
 import com.sunrizon.horizon.pojo.Category;
@@ -123,6 +124,108 @@ public class ArticleServiceImpl implements IArticleService {
       return "";
     }
     return title.trim().toLowerCase().replaceAll("[^a-z0-9\\s-]", "").replaceAll("\\s+", "-");
+  }
+
+  /**
+   * Update an existing article.
+   *
+   * @param aid     Article ID
+   * @param request Update request
+   * @return {@link ResultResponse} with success or error message
+   */
+  @Override
+  @Transactional
+  public ResultResponse<String> updateArticle(String aid, UpdateArticleRequest request) {
+    // 1. 参数验证
+    if (StrUtil.isBlank(aid)) {
+      return ResultResponse.error(ResponseCode.ARTICLE_ID_CANNOT_BE_EMPTY);
+    }
+
+    // 2. 查找文章
+    Article article = articleRepository.findById(aid)
+        .orElseThrow(() -> new RuntimeException("Article not found with id: " + aid));
+
+    // 3. 更新标题（检查唯一性）
+    if (StrUtil.isNotBlank(request.getTitle()) && !request.getTitle().equals(article.getTitle())) {
+      article.setTitle(request.getTitle());
+    }
+
+    // 4. 更新 slug（检查唯一性）
+    if (StrUtil.isNotBlank(request.getSlug()) && !request.getSlug().equals(article.getSlug())) {
+      if (articleRepository.existsBySlug(request.getSlug())) {
+        return ResultResponse.error(ResponseCode.ARTICLE_SLUG_EXISTS);
+      }
+      article.setSlug(request.getSlug());
+    }
+
+    // 5. 更新其他字段
+    if (StrUtil.isNotBlank(request.getSummary())) {
+      article.setSummary(request.getSummary());
+    }
+    if (StrUtil.isNotBlank(request.getContent())) {
+      article.setContent(request.getContent());
+    }
+    if (StrUtil.isNotBlank(request.getCoverImage())) {
+      article.setCoverImage(request.getCoverImage());
+    }
+    if (request.getStatus() != null) {
+      article.setStatus(request.getStatus());
+    }
+    if (request.getIsFeatured() != null) {
+      article.setIsFeatured(request.getIsFeatured());
+    }
+
+    // 6. 更新关联关系 - 分类
+    if (request.getCategoryIds() != null) {
+      Set<Category> categories = categoryRepository.findAllById(request.getCategoryIds())
+          .stream().collect(Collectors.toSet());
+      article.setCategories(categories);
+    }
+
+    // 7. 更新关联关系 - 系列
+    if (request.getSeriesIds() != null) {
+      Set<Series> seriesSet = seriesRepository.findAllById(request.getSeriesIds())
+          .stream().collect(Collectors.toSet());
+      article.setSeries(seriesSet);
+    }
+
+    // 8. 更新关联关系 - 标签
+    if (request.getTagIds() != null) {
+      Set<Tag> tags = tagRepository.findAllById(request.getTagIds())
+          .stream().collect(Collectors.toSet());
+      article.setTags(tags);
+    }
+
+    // 9. 保存更改
+    articleRepository.saveAndFlush(article);
+
+    // 10. 返回响应
+    return ResultResponse.success(ResponseCode.ARTICLE_UPDATED_SUCCESSFULLY);
+  }
+
+  /**
+   * Delete an article by ID.
+   *
+   * @param aid Article ID
+   * @return {@link ResultResponse} with success or error message
+   */
+  @Override
+  @Transactional
+  public ResultResponse<String> deleteArticle(String aid) {
+    // 1. 参数验证
+    if (StrUtil.isBlank(aid)) {
+      return ResultResponse.error(ResponseCode.ARTICLE_ID_CANNOT_BE_EMPTY);
+    }
+
+    // 2. 查找文章
+    Article article = articleRepository.findById(aid)
+        .orElseThrow(() -> new RuntimeException("Article not found with id: " + aid));
+
+    // 3. 删除文章（硬删除）
+    articleRepository.delete(article);
+
+    // 4. 返回响应
+    return ResultResponse.success(ResponseCode.ARTICLE_DELETED_SUCCESSFULLY);
   }
 
   /**

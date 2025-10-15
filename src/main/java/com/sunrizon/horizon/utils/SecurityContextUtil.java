@@ -19,7 +19,7 @@ public class SecurityContextUtil {
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-    log.error(authentication.toString());
+    log.debug("Current authentication: {}", authentication);
 
     if (authentication == null || !authentication.isAuthenticated()) {
       return Optional.empty();
