@@ -78,6 +78,48 @@ springdoc:
   default-consumes-media-type: application/json
   default-produces-media-type: application/json
 
+# Spring Boot Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  health:
+    defaults:
+      enabled: true
+    db:
+      enabled: true
+    redis:
+      enabled: true
+    rabbit:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name:horizon}
+      environment: ${spring.profiles.active:default}
+
+# Application info for /actuator/info
+info:
+  app:
+    name: Horizon Blog System
+    description: A professional blog management system
+    version: 0.0.1-SNAPSHOT
+    encoding: ${project.build.sourceEncoding:UTF-8}
+    java:
+      version: ${java.version:24}
+
 # 可选 OpenAPI / Swagger 配置
 # springdoc:
 #   api-docs:
