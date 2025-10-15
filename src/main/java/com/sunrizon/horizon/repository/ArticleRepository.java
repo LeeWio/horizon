@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -46,4 +47,25 @@ public interface ArticleRepository extends JpaRepository<Article, String> {
     
     // Check if an article exists by slug
     boolean existsBySlug(String slug);
+
+    // Find trending articles by view count
+    Page<Article> findByStatusOrderByViewCountDesc(ArticleStatus status, Pageable pageable);
+
+    // Find trending articles by like count
+    Page<Article> findByStatusOrderByLikeCountDesc(ArticleStatus status, Pageable pageable);
+
+    // Find trending articles by favorite count
+    Page<Article> findByStatusOrderByFavoriteCountDesc(ArticleStatus status, Pageable pageable);
+
+    // Find trending articles by view count with time filter
+    @Query("SELECT a FROM Article a WHERE a.status = :status AND a.createdAt >= :startDate ORDER BY a.viewCount DESC")
+    Page<Article> findTrendingByViews(@Param("status") ArticleStatus status, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    // Find trending articles by like count with time filter
+    @Query("SELECT a FROM Article a WHERE a.status = :status AND a.createdAt >= :startDate ORDER BY a.likeCount DESC")
+    Page<Article> findTrendingByLikes(@Param("status") ArticleStatus status, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    // Find trending articles by favorite count with time filter
+    @Query("SELECT a FROM Article a WHERE a.status = :status AND a.createdAt >= :startDate ORDER BY a.favoriteCount DESC")
+    Page<Article> findTrendingByFavorites(@Param("status") ArticleStatus status, @Param("startDate") LocalDateTime startDate, Pageable pageable);
 }

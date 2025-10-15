@@ -95,4 +95,32 @@ public interface IUserService {
    */
   ResultResponse<java.util.List<UserVO>> getAllUsers();
 
+  /**
+   * Change user password.
+   *
+   * @param uid         unique user ID
+   * @param oldPassword old password
+   * @param newPassword new password
+   * @return ResultResponse with success or error message
+   */
+  ResultResponse<String> changePassword(String uid, String oldPassword, String newPassword);
+
+  /**
+   * Send password reset email.
+   *
+   * @param email user's email address
+   * @return ResultResponse with success or error message
+   */
+  ResultResponse<String> sendPasswordResetEmail(String email);
+
+  /**
+   * Reset password using OTP.
+   *
+   * @param email       user's email address
+   * @param otp         OTP code
+   * @param newPassword new password
+   * @return ResultResponse with success or error message
+   */
+  ResultResponse<String> resetPassword(String email, String otp, String newPassword);
+
 }

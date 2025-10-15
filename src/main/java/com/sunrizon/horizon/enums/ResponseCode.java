@@ -180,7 +180,30 @@ public enum ResponseCode {
   ALREADY_FOLLOWING(10303, "Already following this user"),
   NOT_FOLLOWING(10304, "Not following this user"),
   CANNOT_FOLLOW_SELF(10305, "Cannot follow yourself"),
-  FOLLOW_USER_NOT_FOUND(10306, "User to follow not found");
+  FOLLOW_USER_NOT_FOUND(10306, "User to follow not found"),
+
+  // ==================== User Profile Errors ====================
+  PROFILE_UPDATED(10321, "Profile updated successfully"),
+  PASSWORD_UPDATED(10322, "Password updated successfully"),
+  OLD_PASSWORD_INCORRECT(10323, "Old password is incorrect"),
+  PASSWORD_TOO_WEAK(10324, "Password is too weak"),
+  AVATAR_UPLOADED(10325, "Avatar uploaded successfully"),
+  EMAIL_ALREADY_EXISTS(10326, "Email already exists"),
+  USERNAME_ALREADY_EXISTS(10327, "Username already exists"),
+
+  // ==================== Password Reset Errors ====================
+  PASSWORD_RESET_EMAIL_SENT(10341, "Password reset email sent"),
+  PASSWORD_RESET_SUCCESS(10342, "Password reset successfully"),
+  RESET_TOKEN_INVALID(10343, "Reset token is invalid or expired"),
+  RESET_TOKEN_EXPIRED(10344, "Reset token has expired"),
+
+  // ==================== Notification Errors ====================
+  NOTIFICATION_CREATED(10401, "Notification created successfully"),
+  NOTIFICATION_MARKED_READ(10402, "Notification marked as read"),
+  ALL_NOTIFICATIONS_MARKED_READ(10403, "All notifications marked as read"),
+  NOTIFICATION_DELETED(10404, "Notification deleted successfully"),
+  ALL_NOTIFICATIONS_DELETED(10405, "All notifications deleted"),
+  NOTIFICATION_NOT_FOUND(10406, "Notification not found");
 
   private final int status;
   private final String message;

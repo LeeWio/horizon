@@ -407,20 +407,152 @@ public class UserServiceImpl implements IUserService {
     User user = userRepository.findById(uid)
         .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + uid));
 
-    // Map fields from request to entity
-    // ⚠️ 只更新允许修改的字段，避免直接覆盖敏感信息
-    if (StrUtil.isNotBlank(request.getUsername())) {
+    // Check if username already exists
+    if (StrUtil.isNotBlank(request.getUsername()) && !request.getUsername().equals(user.getUsername())) {
+      if (userRepository.existsByUsername(request.getUsername())) {
+        return ResultResponse.error(ResponseCode.USERNAME_ALREADY_EXISTS);
+      }
       user.setUsername(request.getUsername());
     }
-    if (StrUtil.isNotBlank(request.getEmail())) {
+
+    // Check if email already exists
+    if (StrUtil.isNotBlank(request.getEmail()) && !request.getEmail().equals(user.getEmail())) {
+      if (userRepository.existsByEmail(request.getEmail())) {
+        return ResultResponse.error(ResponseCode.EMAIL_ALREADY_EXISTS);
+      }
       user.setEmail(request.getEmail());
     }
-    // 可在此添加更多字段更新逻辑
+
+    // Update avatar
+    if (StrUtil.isNotBlank(request.getAvatar())) {
+      user.setAvatar(request.getAvatar());
+    }
 
     // Save changes
     userRepository.saveAndFlush(user);
 
-    return ResultResponse.success(ResponseCode.USER_UPDATED_SUCCESSFULLY);
+    return ResultResponse.success(ResponseCode.PROFILE_UPDATED);
+  }
+
+  /**
+   * Change user password.
+   *
+   * @param uid         unique user ID
+   * @param oldPassword old password
+   * @param newPassword new password
+   * @return ResultResponse with success or error message
+   */
+  @Override
+  public ResultResponse<String> changePassword(String uid, String oldPassword, String newPassword) {
+
+    // Validate input
+    if (StrUtil.isBlank(uid)) {
+      return ResultResponse.error(ResponseCode.USER_ID_CANNOT_BE_EMPTY);
+    }
+
+    if (StrUtil.isBlank(oldPassword) || StrUtil.isBlank(newPassword)) {
+      return ResultResponse.error(ResponseCode.USER_PASSWORD_REQUIRED);
+    }
+
+    // Find user
+    User user = userRepository.findById(uid)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with ID: " + uid));
+
+    // Verify old password
+    if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+      return ResultResponse.error(ResponseCode.OLD_PASSWORD_INCORRECT);
+    }
+
+    // Validate new password strength (minimum 8 characters, contains letter and number)
+    if (newPassword.length() < 8 || !newPassword.matches(".*[a-zA-Z].*") || !newPassword.matches(".*\\d.*")) {
+      return ResultResponse.error(ResponseCode.PASSWORD_TOO_WEAK);
+    }
+
+    // Encode and save new password
+    user.setPassword(passwordEncoder.encode(newPassword));
+    userRepository.saveAndFlush(user);
+
+    return ResultResponse.success(ResponseCode.PASSWORD_UPDATED);
+  }
+
+  /**
+   * Send password reset email.
+   *
+   * @param email user's email address
+   * @return ResultResponse with success or error message
+   */
+  @Override
+  public ResultResponse<String> sendPasswordResetEmail(String email) {
+
+    // Validate email format
+    if (!Validator.isEmail(email)) {
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
+    }
+
+    // Check if user exists
+    if (!userRepository.existsByEmail(email)) {
+      return ResultResponse.error(ResponseCode.USER_NOT_FOUND);
+    }
+
+    // Send OTP via RabbitMQ (reuse existing OTP mechanism)
+    rabbitTemplate.convertAndSend(
+        RabbitContants.OTP_VERIFICATION_EXCHANGE,
+        RabbitContants.OTP_VERIFICATION_ROUTING_KEY,
+        email);
+
+    return ResultResponse.success(ResponseCode.PASSWORD_RESET_EMAIL_SENT);
+  }
+
+  /**
+   * Reset password using OTP.
+   *
+   * @param email       user's email address
+   * @param otp         OTP code
+   * @param newPassword new password
+   * @return ResultResponse with success or error message
+   */
+  @Override
+  public ResultResponse<String> resetPassword(String email, String otp, String newPassword) {
+
+    // Validate email format
+    if (!Validator.isEmail(email)) {
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
+    }
+
+    // Validate inputs
+    if (StrUtil.isBlank(otp) || StrUtil.isBlank(newPassword)) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST, "OTP and new password are required");
+    }
+
+    // Verify OTP
+    String redisKey = String.format(RedisContants.OTP_KEY_FORMAT, email);
+    Optional<String> storedOtpOpt = redisUtil.get(redisKey, String.class);
+
+    if (storedOtpOpt.isEmpty()) {
+      return ResultResponse.error(ResponseCode.RESET_TOKEN_EXPIRED);
+    }
+
+    String storedOtp = storedOtpOpt.get();
+    if (!StrUtil.equals(storedOtp, otp)) {
+      return ResultResponse.error(ResponseCode.RESET_TOKEN_INVALID);
+    }
+
+    // Validate password strength
+    if (newPassword.length() < 8 || !newPassword.matches(".*[a-zA-Z].*") || !newPassword.matches(".*\\d.*")) {
+      return ResultResponse.error(ResponseCode.PASSWORD_TOO_WEAK);
+    }
+
+    // Find user and reset password
+    User user = userRepository.findUserByEmail(email)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+
+    user.setPassword(passwordEncoder.encode(newPassword));
+    userRepository.saveAndFlush(user);
+
+    // Delete used OTP
+    redisUtil.delete(redisKey);
+
+    return ResultResponse.success(ResponseCode.PASSWORD_RESET_SUCCESS);
   }
 
 }

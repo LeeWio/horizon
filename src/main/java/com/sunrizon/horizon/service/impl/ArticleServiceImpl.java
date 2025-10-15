@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 
 import com.sunrizon.horizon.dto.CreateArticleRequest;
 import com.sunrizon.horizon.dto.UpdateArticleRequest;
+import com.sunrizon.horizon.enums.ArticleStatus;
 import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.pojo.Article;
 import com.sunrizon.horizon.pojo.Category;
@@ -22,9 +23,12 @@ import jakarta.annotation.Resource;
 
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -305,5 +309,97 @@ public class ArticleServiceImpl implements IArticleService {
 
     // Return response
     return ResultResponse.success(articleVO);
+  }
+
+  /**
+   * Get trending articles by view count.
+   *
+   * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
+   * @param pageable  Pagination info
+   * @return {@link ResultResponse} with page of trending {@link ArticleVO}
+   */
+  @Override
+  public ResultResponse<Page<ArticleVO>> getTrendingByViews(String timeRange, Pageable pageable) {
+    LocalDateTime startDate = calculateStartDate(timeRange);
+    Page<Article> articlePage;
+
+    if (startDate == null) {
+      // All time
+      articlePage = articleRepository.findByStatusOrderByViewCountDesc(ArticleStatus.PUBLISHED, pageable);
+    } else {
+      // With time filter
+      articlePage = articleRepository.findTrendingByViews(ArticleStatus.PUBLISHED, startDate, pageable);
+    }
+
+    Page<ArticleVO> voPage = articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
+    return ResultResponse.success(voPage);
+  }
+
+  /**
+   * Get trending articles by like count.
+   *
+   * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
+   * @param pageable  Pagination info
+   * @return {@link ResultResponse} with page of trending {@link ArticleVO}
+   */
+  @Override
+  public ResultResponse<Page<ArticleVO>> getTrendingByLikes(String timeRange, Pageable pageable) {
+    LocalDateTime startDate = calculateStartDate(timeRange);
+    Page<Article> articlePage;
+
+    if (startDate == null) {
+      // All time
+      articlePage = articleRepository.findByStatusOrderByLikeCountDesc(ArticleStatus.PUBLISHED, pageable);
+    } else {
+      // With time filter
+      articlePage = articleRepository.findTrendingByLikes(ArticleStatus.PUBLISHED, startDate, pageable);
+    }
+
+    Page<ArticleVO> voPage = articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
+    return ResultResponse.success(voPage);
+  }
+
+  /**
+   * Get trending articles by favorite count.
+   *
+   * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
+   * @param pageable  Pagination info
+   * @return {@link ResultResponse} with page of trending {@link ArticleVO}
+   */
+  @Override
+  public ResultResponse<Page<ArticleVO>> getTrendingByFavorites(String timeRange, Pageable pageable) {
+    LocalDateTime startDate = calculateStartDate(timeRange);
+    Page<Article> articlePage;
+
+    if (startDate == null) {
+      // All time
+      articlePage = articleRepository.findByStatusOrderByFavoriteCountDesc(ArticleStatus.PUBLISHED, pageable);
+    } else {
+      // With time filter
+      articlePage = articleRepository.findTrendingByFavorites(ArticleStatus.PUBLISHED, startDate, pageable);
+    }
+
+    Page<ArticleVO> voPage = articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
+    return ResultResponse.success(voPage);
+  }
+
+  /**
+   * Calculate start date based on time range.
+   *
+   * @param timeRange Time range (DAY, WEEK, MONTH, ALL)
+   * @return Start date or null for ALL
+   */
+  private LocalDateTime calculateStartDate(String timeRange) {
+    if (timeRange == null || "ALL".equalsIgnoreCase(timeRange)) {
+      return null;
+    }
+
+    LocalDateTime now = LocalDateTime.now();
+    return switch (timeRange.toUpperCase()) {
+      case "DAY" -> now.minusDays(1);
+      case "WEEK" -> now.minusWeeks(1);
+      case "MONTH" -> now.minusMonths(1);
+      default -> null;
+    };
   }
 }

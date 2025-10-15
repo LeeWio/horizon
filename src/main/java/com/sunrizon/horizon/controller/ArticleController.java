@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sunrizon.horizon.dto.CreateArticleRequest;
@@ -19,12 +20,15 @@ import com.sunrizon.horizon.service.IArticleService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.ArticleVO;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @RestController
 @RequestMapping("/api/article")
+@Tag(name = "Article Management", description = "Article management APIs")
 @Slf4j
 public class ArticleController {
 
@@ -100,8 +104,31 @@ public class ArticleController {
   }
 
   @GetMapping
+  @Operation(summary = "Get articles with pagination")
   public ResultResponse<Page<ArticleVO>> getArticles(Pageable pageable) {
     return articleService.getArticles(pageable);
+  }
+
+  /**
+   * Get trending articles.
+   *
+   * @param type      Ranking type: VIEW, LIKE, FAVORITE (default: VIEW)
+   * @param timeRange Time range: DAY, WEEK, MONTH, ALL (default: WEEK)
+   * @param pageable  Pagination info
+   * @return ResultResponse wrapping page of trending ArticleVO
+   */
+  @GetMapping("/trending")
+  @Operation(summary = "Get trending articles")
+  public ResultResponse<Page<ArticleVO>> getTrendingArticles(
+      @RequestParam(defaultValue = "VIEW") String type,
+      @RequestParam(defaultValue = "WEEK") String timeRange,
+      Pageable pageable) {
+
+    return switch (type.toUpperCase()) {
+      case "LIKE" -> articleService.getTrendingByLikes(timeRange, pageable);
+      case "FAVORITE" -> articleService.getTrendingByFavorites(timeRange, pageable);
+      default -> articleService.getTrendingByViews(timeRange, pageable);
+    };
   }
 
 }

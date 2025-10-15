@@ -68,4 +68,31 @@ public interface IArticleService {
    */
   ResultResponse<ArticleVO> getArticleById(String id);
 
+  /**
+   * Get trending articles by view count.
+   *
+   * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
+   * @param pageable  Pagination info
+   * @return ResultResponse containing a page of trending ArticleVO
+   */
+  ResultResponse<Page<ArticleVO>> getTrendingByViews(String timeRange, Pageable pageable);
+
+  /**
+   * Get trending articles by like count.
+   *
+   * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
+   * @param pageable  Pagination info
+   * @return ResultResponse containing a page of trending ArticleVO
+   */
+  ResultResponse<Page<ArticleVO>> getTrendingByLikes(String timeRange, Pageable pageable);
+
+  /**
+   * Get trending articles by favorite count.
+   *
+   * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
+   * @param pageable  Pagination info
+   * @return ResultResponse containing a page of trending ArticleVO
+   */
+  ResultResponse<Page<ArticleVO>> getTrendingByFavorites(String timeRange, Pageable pageable);
+
 }

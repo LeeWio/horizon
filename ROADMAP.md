@@ -20,7 +20,8 @@
 - **评论系统基础功能（CRUD、回复、分页）** ✨
 - **文章编辑和删除功能** ✨
 - **文章浏览量统计（PV/UV）** ✨
-- **互动功能（点赞、收藏、分享）** ✨ 新增
+- **互动功能（点赞、收藏、分享）** ✨
+- **用户关注系统（关注/取关、粉丝列表）** ✨ 新增
 
 ---
 
@@ -69,8 +70,6 @@
 - [ ] 文章导出（PDF/Markdown）
 
 **技术实现**:
-- 补充 `ArticleController` 的 UPDATE/DELETE 方法
-- 新增 `ArticleVersion` 实体（版本控制）
 - 引入 Elasticsearch 进行全文搜索
 - 使用 Quartz/XXL-Job 实现定时发布
 
@@ -90,8 +89,12 @@
 - [x] 收藏夹管理（通过metadata字段） ✅
 - [x] 检查用户互动状态 ✅
 - [x] 文章互动用户列表 ✅
-- [ ] 用户关注/取关
-- [ ] 粉丝列表
+- [x] 用户关注/取关 ✅
+- [x] 我的关注列表 ✅
+- [x] 粉丝列表 ✅
+- [x] 关注状态检查 ✅
+- [x] 关注数/粉丝数统计 ✅
+- [x] 防止自关注和重复关注 ✅
 - [ ] 阅读历史记录
 - [ ] 用户浏览记录
 - [ ] 点赞通知
@@ -106,18 +109,28 @@
 - ✅ 控制器: `InteractionController` (完整RESTful API)
 - ✅ 数据库表已自动创建并验证
 - ✅ 所有API接口已测试通过
+- ✅ 实体类: `Follow` (用户关注关系)
+- ✅ 表设计: `follow` (唯一约束: follower_id + following_id)
+- ✅ User 实体添加统计字段: `followingCount`, `followersCount`
+- ✅ 服务: `IFollowService`, `FollowServiceImpl`
+- ✅ 控制器: `FollowController` (完整RESTful API)
+- ✅ 引入 SecurityContextUtil 统一认证机制
+- ✅ 所有关注功能API接口已测试通过
 
 ---
 
-### 4. 统计分析 ⭐⭐⭐
+### 4. 统计分析 ⭐⭐⭐ ✅ **已部分完成**
 
 **优先级**: 🔥 高
 
 **功能点**:
 - [x] 文章浏览量统计（PV/UV） ✅
+- [x] 热门文章排行（日/周/月/全部） ✅
+- [x] 按浏览量排行 ✅
+- [x] 按点赞数排行 ✅
+- [x] 按收藏数排行 ✅
 - [ ] 文章阅读时长统计
 - [ ] 用户活跃度分析
-- [ ] 热门文章排行（日/周/月）
 - [ ] 用户增长趋势
 - [ ] 文章发布趋势
 - [ ] 数据可视化图表
@@ -126,60 +139,81 @@
 - [ ] 设备/浏览器统计
 
 **技术实现**:
-- 使用 Redis HyperLogLog 统计 UV
-- 使用 Redis Sorted Set 实现排行榜
-- 定时任务聚合统计数据
-- 引入时序数据库（InfluxDB）存储趋势数据
+- ✅ ArticleRepository 新增按浏览量/点赞/收藏数排序查询
+- ✅ 支持时间范围筛选（DAY, WEEK, MONTH, ALL）
+- ✅ ArticleServiceImpl 实现三种排行方法
+- ✅ ArticleController 统一热门文章API接口
+- 待使用 Redis HyperLogLog 统计 UV
+- 待使用 Redis Sorted Set 实现排行榜
+- 待定时任务聚合统计数据
+- 待引入时序数据库（InfluxDB）存储趋势数据
 
 ---
 
-### 5. 用户功能完善 ⭐⭐
+### 5. 用户功能完善 ⭐⭐ ✅ **已部分完成**
 
 **优先级**: ⚡ 中
 
 **功能点**:
-- [ ] 用户资料编辑（完善 `updateUser` 方法）
+- [x] 用户资料查看（GET `/api/user/profile`） ✅
+- [x] 用户资料编辑（PUT `/api/user/profile`） ✅
+- [x] 修改密码功能（PUT `/api/user/password`） ✅
+- [x] 密码强度验证 ✅
+- [x] 密码找回功能 ✅
+  - [x] 发送重置邮件（POST `/api/user/forgot-password`） ✅
+  - [x] 重置密码（POST `/api/user/reset-password`） ✅
 - [ ] 用户头像上传
 - [ ] 用户个人主页
 - [ ] 用户动态/时间线
 - [ ] 用户成就系统
 - [ ] 用户等级系统
 - [ ] 密码找回功能
-- [ ] 修改密码功能
 - [ ] 绑定邮箱/手机
 - [ ] 第三方登录（GitHub, Google, 微信等）
 - [ ] 双因素认证（2FA）
 - [ ] 账号注销功能
 
 **技术实现**:
-- 完善 `UserServiceImpl.updateUser()` 方法
-- 新增 `Achievement`, `UserLevel` 实体
-- 使用 Spring Social 实现第三方登录
-- 使用 Google Authenticator 实现 2FA
+- ✅ 完善 `UserServiceImpl.updateUser()` 方法
+- ✅ 新增 `UserServiceImpl.changePassword()` 方法
+- ✅ UserController 添加资料管理接口
+- ✅ 使用 SecurityContextUtil 获取当前用户
+- ✅ 密码强度验证（8位+字母+数字）
+- ✅ 防止重复username/email
+- 待新增 `Achievement`, `UserLevel` 实体
+- 待使用 Spring Social 实现第三方登录
+- 待使用 Google Authenticator 实现 2FA
 
 ---
 
-### 6. 通知系统 ⭐⭐
+### 6. 通知系统 ⭐⭐ ✅ **已部分完成**
 
 **优先级**: ⚡ 中
 
 **功能点**:
-- [ ] 站内消息/通知中心
+- [x] 站内消息/通知中心 ✅
+- [x] 通知类型（评论、点赞、关注、收藏、系统） ✅
+- [x] 消息已读/未读状态 ✅
+- [x] 消息删除/清空 ✅
+- [x] 未读数量统计 ✅
+- [x] 按类型筛选通知 ✅
 - [ ] 实时通知（WebSocket 推送）
 - [ ] 邮件通知订阅设置
 - [ ] 评论@提及通知
 - [ ] 系统公告
-- [ ] 消息已读/未读状态
-- [ ] 消息删除/清空
 - [ ] 通知聚合（避免重复）
 - [ ] 通知推送渠道配置（站内/邮件/短信）
 
 **技术实现**:
-- 实体类: `Notification`
-- 表设计: `notification`
-- 使用现有 WebSocket 配置
-- 使用 Redis Pub/Sub 实现实时推送
-- 使用 RabbitMQ 异步发送通知
+- ✅ 实体类: `Notification`
+- ✅ 表设计: `notification`
+- ✅ NotificationRepository 含 @Query 优化
+- ✅ NotificationServiceImpl 完整业务逻辑
+- ✅ NotificationController RESTful API (9个接口)
+- ✅ 数据库索引优化（user_id, is_read, created_at）
+- 待使用现有 WebSocket 配置
+- 待使用 Redis Pub/Sub 实现实时推送
+- 待使用 RabbitMQ 异步发送通知
 
 ---
 
@@ -495,9 +529,9 @@
 3. ✅ **文件上传** - 图片管理（已完成）
 4. ✅ **互动功能** - 点赞/收藏/分享（已完成）
 5. ✅ **浏览量统计** - 基础数据统计（已完成）
-6. **文章搜索** - 用户体验关键
-7. **用户资料编辑** - 完善用户功能
-8. **用户关注系统** - 社交功能基础
+6. ✅ **用户关注系统** - 社交功能基础（已完成）
+7. ✅ **用户资料编辑** - 完善用户功能（已完成）
+8. **文章搜索** - 用户体验关键
 
 **预计工期**: 2-3 周
 

@@ -12,14 +12,20 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sunrizon.horizon.dto.ChangePasswordRequest;
 import com.sunrizon.horizon.dto.CreateUserRequest;
 import com.sunrizon.horizon.dto.LoginUserRequest;
+import com.sunrizon.horizon.dto.ResetPasswordRequest;
+import com.sunrizon.horizon.dto.UpdateUserRequest;
 import com.sunrizon.horizon.enums.UserStatus;
 import com.sunrizon.horizon.service.IUserService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.SecurityContextUtil;
 import com.sunrizon.horizon.vo.AuthVO;
 import com.sunrizon.horizon.vo.UserVO;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
@@ -27,10 +33,14 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequestMapping("/api/user")
 @Slf4j
+@Tag(name = "User Management", description = "User management APIs")
 public class UserController {
 
   @Resource
   private IUserService userService;
+
+  @Resource
+  private SecurityContextUtil securityContextUtil;
 
   /**
    * Create a new user.
@@ -120,8 +130,71 @@ public class UserController {
   }
 
   @GetMapping
+  @Operation(summary = "Get users with pagination")
   public ResultResponse<Page<UserVO>> getUsers(Pageable pageable) {
     return userService.getUsers(pageable);
+  }
+
+  /**
+   * Get current user profile.
+   *
+   * @return ResultResponse wrapping current user's UserVO
+   */
+  @GetMapping("/profile")
+  @Operation(summary = "Get current user profile")
+  public ResultResponse<UserVO> getCurrentUserProfile() {
+    String uid = securityContextUtil.getCurrentUserId().orElse(null);
+    return userService.getUser(uid);
+  }
+
+  /**
+   * Update current user profile.
+   *
+   * @param request DTO containing profile update data
+   * @return ResultResponse with success or error message
+   */
+  @PutMapping("/profile")
+  @Operation(summary = "Update current user profile")
+  public ResultResponse<String> updateProfile(@Valid @RequestBody UpdateUserRequest request) {
+    String uid = securityContextUtil.getCurrentUserId().orElse(null);
+    return userService.updateUser(uid, request);
+  }
+
+  /**
+   * Change current user password.
+   *
+   * @param request DTO containing old and new passwords
+   * @return ResultResponse with success or error message
+   */
+  @PutMapping("/password")
+  @Operation(summary = "Change current user password")
+  public ResultResponse<String> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    String uid = securityContextUtil.getCurrentUserId().orElse(null);
+    return userService.changePassword(uid, request.getOldPassword(), request.getNewPassword());
+  }
+
+  /**
+   * Send password reset email.
+   *
+   * @param email user's email address
+   * @return ResultResponse with success or error message
+   */
+  @PostMapping("/forgot-password")
+  @Operation(summary = "Send password reset email")
+  public ResultResponse<String> forgotPassword(@RequestParam String email) {
+    return userService.sendPasswordResetEmail(email);
+  }
+
+  /**
+   * Reset password using OTP.
+   *
+   * @param request DTO containing email, OTP, and new password
+   * @return ResultResponse with success or error message
+   */
+  @PostMapping("/reset-password")
+  @Operation(summary = "Reset password using OTP")
+  public ResultResponse<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    return userService.resetPassword(request.getEmail(), request.getOtp(), request.getNewPassword());
   }
 
 }
