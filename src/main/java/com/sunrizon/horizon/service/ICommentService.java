@@ -1,6 +1,7 @@
 package com.sunrizon.horizon.service;
 
 import com.sunrizon.horizon.dto.CreateCommentRequest;
+import com.sunrizon.horizon.enums.CommentStatus;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.CommentVO;
 
@@ -67,4 +68,32 @@ public interface ICommentService {
    * @return 包含评论列表的响应
    */
   ResultResponse<List<CommentVO>> getCommentsByUserId(String userId);
+
+  /**
+   * 按排序方式获取评论
+   *
+   * @param articleId 文章ID
+   * @param sortBy    排序方式（HOT/LATEST/EARLIEST）
+   * @param pageable  分页参数
+   * @return 分页评论列表
+   */
+  ResultResponse<Page<CommentVO>> getCommentsBySortType(String articleId, String sortBy, Pageable pageable);
+
+  /**
+   * 审核评论（管理员）
+   *
+   * @param cid    评论ID
+   * @param status 新状态
+   * @return 成功或错误消息
+   */
+  ResultResponse<String> auditComment(String cid, CommentStatus status);
+
+  /**
+   * 按状态查询评论（管理员）
+   *
+   * @param status   评论状态
+   * @param pageable 分页参数
+   * @return 分页评论列表
+   */
+  ResultResponse<Page<CommentVO>> getCommentsByStatus(CommentStatus status, Pageable pageable);
 }

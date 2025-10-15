@@ -3,6 +3,7 @@ package com.sunrizon.horizon.pojo;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+import com.sunrizon.horizon.enums.CommentStatus;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -44,6 +45,10 @@ public class Comment implements Serializable {
 
   @Column(name = "likes_count", nullable = false)
   private Integer likesCount = 0;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "status", nullable = false, length = 20)
+  private CommentStatus status = CommentStatus.APPROVED;
 
   @CreatedDate
   @Column(name = "created_at", updatable = false)

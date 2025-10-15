@@ -18,6 +18,11 @@
 - Spring Security 安全框架
 - Swagger API 文档
 - **评论系统基础功能（CRUD、回复、分页）** ✨
+- **评论点赞功能（通用互动系统）** ✨
+- **评论审核机制（含敏感词过滤）** ✨
+- **评论排序（热门/最新/最早）** ✨
+- **评论实时通知（创建/回复/点赞/审核）** ✨
+- **WebSocket实时推送（STOMP协议）** ✨ 新增
 - **文章编辑和删除功能** ✨
 - **文章浏览量统计（PV/UV）** ✨
 - **互动功能（点赞、收藏、分享）** ✨
@@ -27,26 +32,33 @@
 
 ## 🔴 核心功能缺失
 
-### 1. 评论系统 ⭐⭐⭐
+### 1. 评论系统 ⭐⭐⭐ ✅ **已完成**
 
 **优先级**: 🔥 高
 
 **功能点**:
 - [x] 文章评论基础功能（CRUD） ✅
 - [x] 评论回复（支持多级嵌套） ✅
-- [ ] 评论点赞/点踩
-- [ ] 评论审核机制
-- [ ] 敏感词过滤
-- [ ] 评论通知（邮件/站内信）
-- [ ] 评论排序（热门、最新、最早）
+- [x] 评论点赞/点踩 ✅
+- [x] 评论审核机制 ✅
+- [x] 敏感词过滤 ✅
+- [x] 评论通知（邮件/站内信） ✅
+- [x] 评论排序（热门、最新、最早） ✅
 - [x] 评论分页加载 ✅
 - [ ] 评论@提及用户
 
 **技术实现**:
-- 实体类: `Comment`
-- 表设计: `comment` (支持父子关系)
-- 服务: `ICommentService`, `CommentServiceImpl`
-- 控制器: `CommentController`
+- ✅ 实体类: `Comment` (含status字段)
+- ✅ 枚举类: `CommentStatus` (PENDING, APPROVED, REJECTED, DELETED)
+- ✅ 表设计: `comment` (支持父子关系、点赞数统计、审核状态)
+- ✅ 服务: `ICommentService`, `CommentServiceImpl` (完整业务逻辑)
+- ✅ 控制器: `CommentController` (含点赞、排序、审核API)
+- ✅ 通用互动系统: `Interaction` 支持评论点赞（targetType=COMMENT）
+- ✅ 敏感词工具: `SensitiveWordUtil` (检测、替换、清理)
+- ✅ CommentRepository 添加排序查询（按热门/最新/最早）
+- ✅ 评论审核API（管理员专用）
+- ✅ 含敏感词自动标记为PENDING待审核
+- ✅ 评论创建/回复/点赞/审核通知集成
 
 ---
 
@@ -204,7 +216,7 @@
 - [x] 删除全部通知 ✅
 - [x] 通知分页查询 ✅
 - [x] VO自动填充发送者信息 ✅
-- [ ] 实时通知（WebSocket 推送）
+- [x] 实时通知（WebSocket 推送） ✅
 - [ ] 邮件通知订阅设置
 - [ ] 评论@提及通知
 - [ ] 系统公告
@@ -223,8 +235,10 @@
 - ✅ 使用 @Modifying 批量更新操作
 - ✅ VO自动填充发送者username和avatar
 - ✅ 完整测试通过（正常场景9个 + 异常场景2个）
-- 待使用现有 WebSocket 配置
-- 待使用 Redis Pub/Sub 实现实时推送
+- ✅ WebSocket实时推送集成（STOMP协议）
+- ✅ WebSocketNotificationService 服务
+- ✅ 在线用户检测和管理
+- 待使用 Redis Pub/Sub 实现分布式推送
 - 待使用 RabbitMQ 异步发送通知
 
 ---
@@ -309,45 +323,30 @@
 
 ---
 
-### 10. 缓存优化 ⭐⭐ ✅ **核心功能已完成**
+### 10. 缓存优化 ⭐⭐
 
 **优先级**: ⚡ 中
 
 **功能点**:
-- [x] 热门文章缓存 ✅
-- [x] 用户信息缓存 ✅
-- [x] 分页数据缓存 ✅
-- [x] 缓存失效策略 ✅
-- [x] 多级缓存（本地缓存 + Redis） ✅
-- [x] 缓存穿透/击穿/雪崩防护 ✅
+- [ ] 热门文章缓存
+- [ ] 用户信息缓存
+- [ ] 分页数据缓存
 - [ ] 缓存预热
+- [ ] 缓存失效策略
+- [ ] 多级缓存（本地缓存 + Redis）
+- [ ] 缓存穿透/击穿/雪崩防护
 - [ ] 缓存监控
-
-**技术实现**:
-- ✅ 使用 Spring Cache 抽象
-- ✅ 使用 Caffeine 本地缓存（L1）
-- ✅ 使用 Redis 分布式缓存（L2）
-- ✅ 使用 Redisson 分布式锁
-- ✅ 已创建 CacheConfig 类
-- ✅ 已创建 RedissonConfig 类
-- ✅ 已创建 ICacheService 接口和 CacheServiceImpl 实现
-- ✅ 配置 6 个缓存分类：article, articles, user, category, tag, hotArticles
-- ✅ 实现缓存穿透防护（缓存null值，短TTL）
-- ✅ 实现缓存击穿防护（分布式锁）
-- ✅ 实现缓存雪崩防护（随机TTL）
-- ✅ 在 ArticleService 中应用缓存
-- [ ] 使用 Redis Pipeline 批量操作
 
 ---
 
-### 11. 性能优化 ⭐⭐
+### 11. 性能优化 ⭐⭐ ✅ **部分完成**
 
 **优先级**: ⚡ 中
 
 **功能点**:
-- [ ] 数据库索引优化
+- [x] 数据库索引优化 ✅
 - [ ] 慢查询监控
-- [ ] API 接口限流
+- [x] API 接口限流（Resilience4j已实现） ✅
 - [ ] CDN 静态资源加速
 - [ ] 数据库读写分离
 - [ ] 分库分表支持
@@ -356,22 +355,26 @@
 - [ ] SQL 优化（N+1 问题）
 
 **技术实现**:
-- 使用 Resilience4j 限流
-- 使用 ShardingSphere 分库分表
-- 使用 Druid 连接池监控
-- 使用 JPA 懒加载优化
+- ✅ Article表添加8个索引（status, author_id, created_at, view_count, like_count, favorite_count, 组合索引）
+- ✅ Comment表添加4个索引（article_id, user_id, parent_id, created_at）
+- ✅ Interaction表添加4个索引（article_id, user_id, type, 组合索引）
+- ✅ Follow表添加2个索引（follower_id, following_id）
+- 待使用 Resilience4j 限流
+- 待使用 ShardingSphere 分库分表
+- 待使用 Druid 连接池监控
+- 待使用 JPA 懒加载优化
 
 ---
 
-### 12. 管理后台 ⭐⭐⭐ ✅ **部分完成**
+### 12. 管理后台 ⭐⭐⭐ ✅ **已完成**
 
 **优先级**: 🔥 高
 
 **功能点**:
-- [x] 用户管理界面（审核、禁用、删除） ✅ 部分完成（审核功能）
-- [ ] 文章管理界面（审核、编辑、删除）
-- [ ] 评论管理界面（审核、删除）
-- [ ] 数据统计面板（Dashboard）
+- [x] 用户管理界面（审核、禁用、删除） ✅
+- [x] 文章管理界面（按状态查询、状态更新、删除） ✅
+- [x] 评论管理界面（查询、删除） ✅
+- [x] 数据统计面板（Dashboard） ✅
 - [ ] 系统配置管理
 - [ ] 日志查看（操作日志、错误日志）
 - [ ] 操作审计
@@ -381,39 +384,50 @@
 
 **技术实现**:
 - ✅ 已创建 `AdminController`
-- ✅ 已实现 TODO 中的用户审核功能
+- ✅ 已实现用户审核功能
+- ✅ 已实现文章管理API（GET /api/admin/articles, PATCH /api/admin/articles/{aid}/status, DELETE /api/admin/articles/{aid}）
+- ✅ 已实现评论管理API（GET /api/admin/comments, DELETE /api/admin/comments/{cid}）
+- ✅ 已实现数据统计Dashboard（GET /api/admin/dashboard/stats）
 - ✅ 使用 RabbitMQ 通知管理员
-- ✅ 提供 2 个管理接口：
-  - GET /api/admin/users/pending: 获取待审核用户
-  - POST /api/admin/users/audit: 审核用户
+- ✅ 提供完整的管理接口
 - 待新增 `OperationLog` 实体
 - 待使用 Spring AOP 记录操作日志
 
 ---
 
-### 13. 安全增强 ⭐⭐
+### 13. 安全增强 ⭐⭐ ✅ **核心功能已完成**
 
 **优先级**: ⚡ 中
 
 **功能点**:
+- [x] XSS 防护 ✅
+- [x] SQL 注入防护（JPA 已自动防护） ✅
+- [x] API 调用频率限制（Resilience4j已实现） ✅
 - [ ] IP 黑名单/白名单
 - [ ] 防刷机制
 - [ ] CAPTCHA 验证码
-- [ ] XSS 防护
-- [ ] SQL 注入防护（JPA 已自动防护）
 - [ ] CSRF 防护（按需启用）
 - [ ] 敏感操作二次验证
-- [ ] API 调用频率限制
 - [ ] 防暴力破解
 - [ ] 登录日志记录
 - [ ] 异常登录检测
 
 **技术实现**:
-- 使用 Kaptcha 生成验证码
-- 使用 Resilience4j RateLimiter
-- 使用 Redis 存储黑名单
-- 使用 Spring Security CSRF Token
-- 使用 Jsoup 过滤 XSS
+- ✅ 已创建 `XssUtil` 工具类（基于Jsoup）
+  - cleanBasic(): 移除所有HTML
+  - cleanRelaxed(): 允许安全标签
+  - cleanArticle(): 富文本白名单
+  - cleanUserInput(): 用户输入清理
+  - containsXss(): XSS检测
+- ✅ 已创建 `XssFilter` 过滤器
+  - 自动清理请求参数
+  - 白名单路径支持
+- ✅ ArticleService集成XSS防护
+- ✅ CommentService集成XSS防护
+- ✅ pom.xml添加jsoup依赖
+- 待使用 Kaptcha 生成验证码
+- 待使用 Redis 存储黑名单
+- 待使用 Spring Security CSRF Token
 
 ---
 
@@ -587,14 +601,14 @@
 
 ### 💡 P2 - 中优先级（优化提升）
 
-1. ✅ **缓存优化** - 已完成 ✨ 新增
-2. **安全增强** - 部分完成（API限流已完成）
-3. **性能优化** - 待开发
+1. ✅ **缓存优化** - 已完成 ✨
+2. ✅ **安全增强** - 核心功能已完成（XSS防护） ✨
+3. ✅ **性能优化** - 部分完成（数据库索引优化） ✨
 4. ✅ **运维监控** - 已完成 ✨
 5. **内容审核** - 待开发
 6. **SEO 优化** - 待开发
 
-**预计工期**: 剩余 1-1.5 周
+**预计工期**: 剩余 0.5-1 周
 
 ---
 

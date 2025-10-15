@@ -4,12 +4,17 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 
 import com.sunrizon.horizon.dto.CreateCommentRequest;
+import com.sunrizon.horizon.enums.CommentStatus;
+import com.sunrizon.horizon.enums.NotificationType;
 import com.sunrizon.horizon.enums.ResponseCode;
+import com.sunrizon.horizon.pojo.Article;
 import com.sunrizon.horizon.pojo.Comment;
 import com.sunrizon.horizon.repository.ArticleRepository;
 import com.sunrizon.horizon.repository.CommentRepository;
 import com.sunrizon.horizon.service.ICommentService;
+import com.sunrizon.horizon.service.INotificationService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.SensitiveWordUtil;
 import com.sunrizon.horizon.utils.XssUtil;
 import com.sunrizon.horizon.vo.CommentVO;
 
@@ -40,6 +45,9 @@ public class CommentServiceImpl implements ICommentService {
   @Resource
   private ArticleRepository articleRepository;
 
+  @Resource
+  private INotificationService notificationService;
+
   /**
    * 创建新评论
    *
@@ -50,13 +58,16 @@ public class CommentServiceImpl implements ICommentService {
   @Transactional
   public ResultResponse<CommentVO> createComment(CreateCommentRequest request) {
     // 1. 参数验证 - 检查文章是否存在
-    if (!articleRepository.existsById(request.getArticleId())) {
+    Article article = articleRepository.findById(request.getArticleId()).orElse(null);
+    if (article == null) {
       return ResultResponse.error(ResponseCode.COMMENT_ARTICLE_NOT_FOUND);
     }
 
     // 2. 如果是回复评论，检查父评论是否存在
+    Comment parentComment = null;
     if (StrUtil.isNotBlank(request.getParentId())) {
-      if (!commentRepository.existsById(request.getParentId())) {
+      parentComment = commentRepository.findById(request.getParentId()).orElse(null);
+      if (parentComment == null) {
         return ResultResponse.error(ResponseCode.COMMENT_PARENT_NOT_FOUND);
       }
     }
@@ -69,13 +80,58 @@ public class CommentServiceImpl implements ICommentService {
       comment.setContent(XssUtil.cleanUserInput(comment.getContent()));
     }
 
+    // 敏感词过滤
+    if (SensitiveWordUtil.containsSensitiveWord(comment.getContent())) {
+      // 替换敏感词
+      comment.setContent(SensitiveWordUtil.replaceSensitiveWord(comment.getContent()));
+      // 标记为待审核（可选）
+      comment.setStatus(CommentStatus.PENDING);
+    } else {
+      // 直接通过
+      comment.setStatus(CommentStatus.APPROVED);
+    }
+
     // 4. 保存数据
     Comment savedComment = commentRepository.save(comment);
 
-    // 5. Entity 转 VO
+    // 5. 发送通知
+    try {
+      if (parentComment != null) {
+        // 回复评论：通知父评论作者
+        // 避免自己回复自己的评论时发通知
+        if (!parentComment.getUserId().equals(request.getUserId())) {
+          notificationService.createNotification(
+              parentComment.getUserId(),
+              NotificationType.COMMENT,
+              "评论回复通知",
+              "您的诅论收到了新的回复",
+              savedComment.getCid(),
+              request.getUserId()
+          );
+        }
+      } else {
+        // 文章评论：通知文章作者
+        // 避免自己评论自己的文章时发通知
+        if (!article.getAuthorId().equals(request.getUserId())) {
+          notificationService.createNotification(
+              article.getAuthorId(),
+              NotificationType.COMMENT,
+              "文章评论通知",
+              "您的文章《" + article.getTitle() + "》收到了新评论",
+              savedComment.getCid(),
+              request.getUserId()
+          );
+        }
+      }
+    } catch (Exception e) {
+      // 通知发送失败不影响评论创建
+      log.warn("发送评论通知失败: {}", e.getMessage());
+    }
+
+    // 6. Entity 转 VO
     CommentVO commentVO = BeanUtil.copyProperties(savedComment, CommentVO.class);
 
-    // 6. 返回统一响应
+    // 7. 返回统一响应
     return ResultResponse.success(ResponseCode.COMMENT_CREATED, commentVO);
   }
 
@@ -225,5 +281,96 @@ public class CommentServiceImpl implements ICommentService {
 
     // 返回响应
     return ResultResponse.success(commentVOs);
+  }
+
+  /**
+   * 按排序方式获取评论
+   */
+  @Override
+  public ResultResponse<Page<CommentVO>> getCommentsBySortType(String articleId, String sortBy, Pageable pageable) {
+    if (StrUtil.isBlank(articleId)) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST);
+    }
+
+    Page<Comment> commentPage;
+    CommentStatus status = CommentStatus.APPROVED; // 只显示已审核通过的评论
+
+    // 根据排序方式查询
+    if ("HOT".equalsIgnoreCase(sortBy)) {
+      // 按热门度（点赞数）排序
+      commentPage = commentRepository.findByArticleIdOrderByLikesCountDesc(articleId, status, pageable);
+    } else if ("EARLIEST".equalsIgnoreCase(sortBy)) {
+      // 按最早（时间升序）
+      commentPage = commentRepository.findByArticleIdOrderByCreatedAtAsc(articleId, status, pageable);
+    } else {
+      // 默认按最新（时间降序）
+      commentPage = commentRepository.findByArticleIdOrderByCreatedAtDesc(articleId, status, pageable);
+    }
+
+    // Entity 转 VO
+    Page<CommentVO> voPage = commentPage.map(comment -> BeanUtil.copyProperties(comment, CommentVO.class));
+
+    return ResultResponse.success(voPage);
+  }
+
+  /**
+   * 审核评论（管理员）
+   */
+  @Override
+  @Transactional
+  public ResultResponse<String> auditComment(String cid, CommentStatus status) {
+    if (StrUtil.isBlank(cid) || status == null) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST);
+    }
+
+    Comment comment = commentRepository.findById(cid)
+        .orElseThrow(() -> new RuntimeException("Comment not found with id: " + cid));
+
+    CommentStatus oldStatus = comment.getStatus();
+    comment.setStatus(status);
+    commentRepository.saveAndFlush(comment);
+
+    // 发送审核结果通知
+    try {
+      // 只有当状态发生变化时才发送通知
+      if (oldStatus != status) {
+        String title = "评论审核通知";
+        String content;
+        if (status == CommentStatus.APPROVED) {
+          content = "您的评论已通过审核";
+        } else if (status == CommentStatus.REJECTED) {
+          content = "您的评论未通过审核";
+        } else {
+          content = "您的评论状态已更新为：" + status.name();
+        }
+        notificationService.createNotification(
+            comment.getUserId(),
+            NotificationType.SYSTEM,
+            title,
+            content,
+            cid,
+            null // 系统通知无发送者
+        );
+      }
+    } catch (Exception e) {
+      log.warn("发送审核通知失败: {}", e.getMessage());
+    }
+
+    return ResultResponse.success(ResponseCode.SUCCESS);
+  }
+
+  /**
+   * 按状态查询评论（管理员）
+   */
+  @Override
+  public ResultResponse<Page<CommentVO>> getCommentsByStatus(CommentStatus status, Pageable pageable) {
+    if (status == null) {
+      return ResultResponse.error(ResponseCode.BAD_REQUEST);
+    }
+
+    Page<Comment> commentPage = commentRepository.findByStatus(status, pageable);
+    Page<CommentVO> voPage = commentPage.map(comment -> BeanUtil.copyProperties(comment, CommentVO.class));
+
+    return ResultResponse.success(voPage);
   }
 }

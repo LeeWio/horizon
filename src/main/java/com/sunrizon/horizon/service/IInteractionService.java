@@ -49,4 +49,37 @@ public interface IInteractionService {
    */
   ResultResponse<Page<InteractionVO>> getUserInteractionsByMetadata(String userId,
       InteractionType type, String keyword, Pageable pageable);
+
+  // ==================== 通用互动方法（支持文章和评论） ====================
+
+  /**
+   * 添加通用互动（支持文章和评论）
+   *
+   * @param userId     用户ID
+   * @param targetId   目标ID（文章ID或评论ID）
+   * @param targetType 目标类型（ARTICLE或COMMENT）
+   * @param type       互动类型（LIKE/FAVORITE/SHARE）
+   * @param metadata   元数据（可选）
+   * @return 互动VO
+   */
+  ResultResponse<InteractionVO> addGenericInteraction(String userId, String targetId,
+      String targetType, InteractionType type, String metadata);
+
+  /**
+   * 取消通用互动
+   */
+  ResultResponse<String> removeGenericInteraction(String userId, String targetId,
+      String targetType, InteractionType type);
+
+  /**
+   * 检查通用互动是否存在
+   */
+  ResultResponse<Boolean> checkGenericInteraction(String userId, String targetId,
+      String targetType, InteractionType type);
+
+  /**
+   * 获取目标的互动数量
+   */
+  ResultResponse<Long> getGenericInteractionCount(String targetId, String targetType,
+      InteractionType type);
 }

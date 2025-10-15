@@ -59,4 +59,34 @@ public interface InteractionRepository extends JpaRepository<Interaction, String
       @Param("type") InteractionType type,
       @Param("keyword") String keyword,
       Pageable pageable);
+
+  // ==================== 通用查询方法（支持targetId+targetType） ====================
+
+  /**
+   * 检查通用互动是否存在
+   */
+  boolean existsByTargetIdAndTargetTypeAndUserIdAndType(String targetId, String targetType, 
+      String userId, InteractionType type);
+
+  /**
+   * 统计通用目标的互动数量
+   */
+  long countByTargetIdAndTargetTypeAndType(String targetId, String targetType, InteractionType type);
+
+  /**
+   * 删除通用互动
+   */
+  @Modifying
+  @Query("DELETE FROM Interaction i WHERE i.targetId = :targetId AND i.targetType = :targetType AND i.userId = :userId AND i.type = :type")
+  void deleteByTargetIdAndTargetTypeAndUserIdAndType(
+      @Param("targetId") String targetId,
+      @Param("targetType") String targetType,
+      @Param("userId") String userId,
+      @Param("type") InteractionType type);
+
+  /**
+   * 获取目标的互动列表（分页）
+   */
+  Page<Interaction> findByTargetIdAndTargetTypeAndType(String targetId, String targetType, 
+      InteractionType type, Pageable pageable);
 }

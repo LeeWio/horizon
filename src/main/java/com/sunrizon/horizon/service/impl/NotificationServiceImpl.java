@@ -2,6 +2,7 @@ package com.sunrizon.horizon.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
+import com.sunrizon.horizon.dto.WebSocketNotificationMessage;
 import com.sunrizon.horizon.enums.NotificationType;
 import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.pojo.Notification;
@@ -9,6 +10,7 @@ import com.sunrizon.horizon.pojo.User;
 import com.sunrizon.horizon.repository.NotificationRepository;
 import com.sunrizon.horizon.repository.UserRepository;
 import com.sunrizon.horizon.service.INotificationService;
+import com.sunrizon.horizon.service.IWebSocketNotificationService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.NotificationVO;
 import jakarta.annotation.Resource;
@@ -32,6 +34,9 @@ public class NotificationServiceImpl implements INotificationService {
 
   @Resource
   private UserRepository userRepository;
+
+  @Resource
+  private IWebSocketNotificationService webSocketNotificationService;
 
   @Override
   @Transactional
@@ -57,6 +62,26 @@ public class NotificationServiceImpl implements INotificationService {
 
     // Convert to VO
     NotificationVO vo = convertToVO(saved);
+
+    // WebSocket实时推送
+    try {
+      if (webSocketNotificationService.isUserOnline(userId)) {
+        // 用户在线，推送实时通知
+        WebSocketNotificationMessage wsMessage = convertToWebSocketMessage(vo);
+        
+        // 获取未读通知数量
+        Long unreadCount = notificationRepository.countByUserIdAndIsRead(userId, false);
+        wsMessage.setUnreadCount(unreadCount);
+        
+        webSocketNotificationService.sendToUser(userId, wsMessage);
+        log.info("WebSocket notification sent to online user: {}", userId);
+      } else {
+        log.debug("User is offline, notification saved to database: {}", userId);
+      }
+    } catch (Exception e) {
+      // WebSocket推送失败不影响通知创建
+      log.warn("Failed to send WebSocket notification to user: {}", userId, e);
+    }
 
     return ResultResponse.success(ResponseCode.NOTIFICATION_CREATED, vo);
   }
@@ -207,5 +232,22 @@ public class NotificationServiceImpl implements INotificationService {
     }
 
     return vo;
+  }
+
+  /**
+   * Convert NotificationVO to WebSocketNotificationMessage
+   */
+  private WebSocketNotificationMessage convertToWebSocketMessage(NotificationVO vo) {
+    WebSocketNotificationMessage message = new WebSocketNotificationMessage();
+    message.setNid(vo.getNid());
+    message.setType(vo.getType());
+    message.setTitle(vo.getTitle());
+    message.setContent(vo.getContent());
+    message.setRelatedId(vo.getRelatedId());
+    message.setSenderId(vo.getSenderId());
+    message.setSenderUsername(vo.getSenderUsername());
+    message.setSenderAvatar(vo.getSenderAvatar());
+    message.setCreatedAt(vo.getCreatedAt());
+    return message;
   }
 }
