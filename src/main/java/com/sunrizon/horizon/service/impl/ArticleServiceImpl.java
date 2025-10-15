@@ -16,6 +16,7 @@ import com.sunrizon.horizon.repository.CategoryRepository;
 import com.sunrizon.horizon.repository.SeriesRepository;
 import com.sunrizon.horizon.repository.TagRepository;
 import com.sunrizon.horizon.service.IArticleService;
+import com.sunrizon.horizon.service.ICacheService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.ArticleVO;
 
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -53,6 +55,9 @@ public class ArticleServiceImpl implements IArticleService {
 
   @Resource
   private TagRepository tagRepository;
+
+  @Resource
+  private ICacheService cacheService;
 
   /**
    * Create a new article.
@@ -203,12 +208,19 @@ public class ArticleServiceImpl implements IArticleService {
     // 9. 保存更改
     articleRepository.saveAndFlush(article);
 
-    // 10. 返回响应
+    // 10. 清除缓存
+    cacheService.evict("article:" + aid, "article");
+    cacheService.clear("hotArticles"); // Clear hot articles cache
+    log.info("Cache cleared for article: {}", aid);
+
+    // 11. 返回响应
     return ResultResponse.success(ResponseCode.ARTICLE_UPDATED_SUCCESSFULLY);
   }
 
   /**
    * Delete an article by ID.
+   * <p>
+   * Clears cache after deletion
    *
    * @param aid Article ID
    * @return {@link ResultResponse} with success or error message
@@ -228,7 +240,12 @@ public class ArticleServiceImpl implements IArticleService {
     // 3. 删除文章（硬删除）
     articleRepository.delete(article);
 
-    // 4. 返回响应
+    // 4. 清除缓存
+    cacheService.evict("article:" + aid, "article");
+    cacheService.clear("hotArticles");
+    log.info("Cache cleared after deleting article: {}", aid);
+
+    // 5. 返回响应
     return ResultResponse.success(ResponseCode.ARTICLE_DELETED_SUCCESSFULLY);
   }
 
@@ -294,25 +311,37 @@ public class ArticleServiceImpl implements IArticleService {
 
   /**
    * Get an article by its ID.
+   * <p>
+   * Uses multi-level caching: Caffeine (L1) -> Redis (L2) -> Database
    *
    * @param id The article ID to find
    * @return {@link ResultResponse} with {@link ArticleVO} matching the ID
    */
   @Override
   public ResultResponse<ArticleVO> getArticleById(String id) {
-    // Fetch article by ID
-    Article article = articleRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
+    // Try to get from cache first
+    String cacheKey = "article:" + id;
+    ArticleVO cachedArticle = cacheService.get(
+        cacheKey,
+        ArticleVO.class,
+        () -> {
+          // Cache miss - load from database
+          Article article = articleRepository.findById(id)
+              .orElseThrow(() -> new RuntimeException("Article not found with id: " + id));
+          return BeanUtil.copyProperties(article, ArticleVO.class);
+        },
+        "article",
+        10,
+        TimeUnit.MINUTES
+    );
 
-    // Map entity to VO
-    ArticleVO articleVO = BeanUtil.copyProperties(article, ArticleVO.class);
-
-    // Return response
-    return ResultResponse.success(articleVO);
+    return ResultResponse.success(cachedArticle);
   }
 
   /**
    * Get trending articles by view count.
+   * <p>
+   * Uses caching with 5-minute TTL for hot article rankings
    *
    * @param timeRange Time range filter (DAY, WEEK, MONTH, ALL)
    * @param pageable  Pagination info
@@ -320,19 +349,33 @@ public class ArticleServiceImpl implements IArticleService {
    */
   @Override
   public ResultResponse<Page<ArticleVO>> getTrendingByViews(String timeRange, Pageable pageable) {
-    LocalDateTime startDate = calculateStartDate(timeRange);
-    Page<Article> articlePage;
+    String cacheKey = String.format("trending:views:%s:page%d:size%d",
+        timeRange, pageable.getPageNumber(), pageable.getPageSize());
 
-    if (startDate == null) {
-      // All time
-      articlePage = articleRepository.findByStatusOrderByViewCountDesc(ArticleStatus.PUBLISHED, pageable);
-    } else {
-      // With time filter
-      articlePage = articleRepository.findTrendingByViews(ArticleStatus.PUBLISHED, startDate, pageable);
-    }
+    // Use cache for hot article rankings
+    Page<ArticleVO> cachedPage = cacheService.get(
+        cacheKey,
+        Page.class,
+        () -> {
+          LocalDateTime startDate = calculateStartDate(timeRange);
+          Page<Article> articlePage;
 
-    Page<ArticleVO> voPage = articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
-    return ResultResponse.success(voPage);
+          if (startDate == null) {
+            // All time
+            articlePage = articleRepository.findByStatusOrderByViewCountDesc(ArticleStatus.PUBLISHED, pageable);
+          } else {
+            // With time filter
+            articlePage = articleRepository.findTrendingByViews(ArticleStatus.PUBLISHED, startDate, pageable);
+          }
+
+          return articlePage.map(article -> BeanUtil.copyProperties(article, ArticleVO.class));
+        },
+        "hotArticles",
+        5,
+        TimeUnit.MINUTES
+    );
+
+    return ResultResponse.success(cachedPage);
   }
 
   /**
