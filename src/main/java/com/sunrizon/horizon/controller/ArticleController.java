@@ -18,6 +18,7 @@ import com.sunrizon.horizon.dto.CreateArticleRequest;
 import com.sunrizon.horizon.dto.UpdateArticleRequest;
 import com.sunrizon.horizon.service.IArticleService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.vo.ArticleDetailVO;
 import com.sunrizon.horizon.vo.ArticleVO;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -101,6 +102,18 @@ public class ArticleController {
   @GetMapping("/{id}")
   public ResultResponse<ArticleVO> getArticleById(@PathVariable("id") String id) {
     return articleService.getArticleById(id);
+  }
+
+  /**
+   * Retrieve article detail with SEO metadata.
+   * 
+   * @param id The article ID to find
+   * @return ResultResponse wrapping ArticleDetailVO with SEO metadata
+   */
+  @GetMapping("/{id}/detail")
+  @Operation(summary = "Get article detail with SEO metadata")
+  public ResultResponse<ArticleDetailVO> getArticleDetailWithSeo(@PathVariable("id") String id) {
+    return articleService.getArticleDetailWithSeo(id);
   }
 
   @GetMapping

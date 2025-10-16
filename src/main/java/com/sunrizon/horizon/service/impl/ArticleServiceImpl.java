@@ -8,10 +8,12 @@ import com.sunrizon.horizon.dto.UpdateArticleRequest;
 import com.sunrizon.horizon.enums.ArticleStatus;
 import com.sunrizon.horizon.enums.ResponseCode;
 import com.sunrizon.horizon.pojo.Article;
+import com.sunrizon.horizon.pojo.ArticleSeo;
 import com.sunrizon.horizon.pojo.Category;
 import com.sunrizon.horizon.pojo.Series;
 import com.sunrizon.horizon.pojo.Tag;
 import com.sunrizon.horizon.repository.ArticleRepository;
+import com.sunrizon.horizon.repository.ArticleSeoRepository;
 import com.sunrizon.horizon.repository.CategoryRepository;
 import com.sunrizon.horizon.repository.SeriesRepository;
 import com.sunrizon.horizon.repository.TagRepository;
@@ -20,6 +22,7 @@ import com.sunrizon.horizon.service.IArticleService;
 import com.sunrizon.horizon.service.ICacheService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.utils.XssUtil;
+import com.sunrizon.horizon.vo.ArticleDetailVO;
 import com.sunrizon.horizon.vo.ArticleVO;
 
 import jakarta.annotation.Resource;
@@ -32,7 +35,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -48,6 +54,9 @@ public class ArticleServiceImpl implements IArticleService {
 
   @Resource
   private ArticleRepository articleRepository;
+
+  @Resource
+  private ArticleSeoRepository articleSeoRepository;
 
   @Resource
   private CategoryRepository categoryRepository;
@@ -459,5 +468,108 @@ public class ArticleServiceImpl implements IArticleService {
       case "MONTH" -> now.minusMonths(1);
       default -> null;
     };
+  }
+
+  /**
+   * Get article detail with SEO metadata.
+   *
+   * @param id Article ID
+   * @return {@link ResultResponse} with {@link ArticleDetailVO} including SEO metadata
+   */
+  @Override
+  public ResultResponse<ArticleDetailVO> getArticleDetailWithSeo(String id) {
+    if (StrUtil.isBlank(id)) {
+      return ResultResponse.error(ResponseCode.ARTICLE_ID_CANNOT_BE_EMPTY);
+    }
+
+    // Get article
+    Optional<Article> articleOpt = articleRepository.findById(id);
+    if (articleOpt.isEmpty()) {
+      return ResultResponse.error(ResponseCode.ARTICLE_NOT_FOUND);
+    }
+
+    Article article = articleOpt.get();
+
+    // Convert to ArticleDetailVO
+    ArticleDetailVO detailVO = BeanUtil.copyProperties(article, ArticleDetailVO.class);
+
+    // Get SEO metadata if exists
+    Optional<ArticleSeo> seoOpt = articleSeoRepository.findByArticleId(id);
+    if (seoOpt.isPresent()) {
+      ArticleSeo seo = seoOpt.get();
+      ArticleDetailVO.SeoMetadata seoMetadata = new ArticleDetailVO.SeoMetadata();
+      seoMetadata.setSeoTitle(seo.getSeoTitle());
+      seoMetadata.setSeoDescription(seo.getSeoDescription());
+      seoMetadata.setSeoKeywords(seo.getSeoKeywords());
+      seoMetadata.setCanonicalUrl(seo.getCanonicalUrl());
+      seoMetadata.setOgTitle(seo.getOgTitle());
+      seoMetadata.setOgDescription(seo.getOgDescription());
+      seoMetadata.setOgImage(seo.getOgImage());
+      seoMetadata.setOgType(seo.getOgType());
+      seoMetadata.setTwitterCard(seo.getTwitterCard());
+      seoMetadata.setTwitterSite(seo.getTwitterSite());
+      seoMetadata.setJsonLd(seo.getSchemaJson());
+      seoMetadata.setRobotsMeta(seo.getRobotsMeta());
+      detailVO.setSeo(seoMetadata);
+
+      // Generate meta tags map
+      Map<String, String> metaTags = new HashMap<>();
+      metaTags.put("title", StrUtil.isNotBlank(seo.getSeoTitle()) ? seo.getSeoTitle() : article.getTitle());
+      metaTags.put("description", StrUtil.isNotBlank(seo.getSeoDescription()) ? seo.getSeoDescription() : article.getSummary());
+      if (StrUtil.isNotBlank(seo.getSeoKeywords())) {
+        metaTags.put("keywords", seo.getSeoKeywords());
+      }
+      if (StrUtil.isNotBlank(seo.getCanonicalUrl())) {
+        metaTags.put("canonical", seo.getCanonicalUrl());
+      }
+      metaTags.put("robots", seo.getRobotsMeta());
+      detailVO.setMetaTags(metaTags);
+
+      // Generate Open Graph tags map
+      Map<String, String> ogTags = new HashMap<>();
+      ogTags.put("og:title", StrUtil.isNotBlank(seo.getOgTitle()) ? seo.getOgTitle() : article.getTitle());
+      ogTags.put("og:description", StrUtil.isNotBlank(seo.getOgDescription()) ? seo.getOgDescription() : article.getSummary());
+      ogTags.put("og:type", seo.getOgType());
+      if (StrUtil.isNotBlank(seo.getOgImage())) {
+        ogTags.put("og:image", seo.getOgImage());
+      }
+      ogTags.put("twitter:card", seo.getTwitterCard());
+      if (StrUtil.isNotBlank(seo.getTwitterSite())) {
+        ogTags.put("twitter:site", seo.getTwitterSite());
+      }
+      detailVO.setOgTags(ogTags);
+    } else {
+      // Generate default meta tags from article
+      Map<String, String> metaTags = new HashMap<>();
+      metaTags.put("title", article.getTitle());
+      if (StrUtil.isNotBlank(article.getSummary())) {
+        metaTags.put("description", article.getSummary());
+      }
+      metaTags.put("robots", "index,follow");
+      detailVO.setMetaTags(metaTags);
+
+      Map<String, String> ogTags = new HashMap<>();
+      ogTags.put("og:title", article.getTitle());
+      if (StrUtil.isNotBlank(article.getSummary())) {
+        ogTags.put("og:description", article.getSummary());
+      }
+      ogTags.put("og:type", "article");
+      if (StrUtil.isNotBlank(article.getCoverImage())) {
+        ogTags.put("og:image", article.getCoverImage());
+      }
+      ogTags.put("twitter:card", "summary_large_image");
+      detailVO.setOgTags(ogTags);
+    }
+
+    // Set interaction stats
+    ArticleDetailVO.InteractionStats stats = new ArticleDetailVO.InteractionStats();
+    stats.setLikeCount(article.getLikeCount());
+    stats.setFavoriteCount(article.getFavoriteCount());
+    stats.setShareCount(article.getShareCount());
+    // Comment count would need to be fetched from CommentRepository
+    stats.setCommentCount(0L); // TODO: Implement comment count query
+    detailVO.setStats(stats);
+
+    return ResultResponse.success(detailVO);
   }
 }

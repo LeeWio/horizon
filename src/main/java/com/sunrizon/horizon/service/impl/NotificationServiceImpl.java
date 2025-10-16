@@ -128,7 +128,7 @@ public class NotificationServiceImpl implements INotificationService {
   @Override
   public ResultResponse<Long> getUnreadCount(String userId) {
     if (StrUtil.isBlank(userId)) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST, 0L);
+      return ResultResponse.error(ResponseCode.BAD_REQUEST);
     }
 
     Long count = notificationRepository.countByUserIdAndIsRead(userId, false);

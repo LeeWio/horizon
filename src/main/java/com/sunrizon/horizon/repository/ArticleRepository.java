@@ -68,4 +68,54 @@ public interface ArticleRepository extends JpaRepository<Article, String> {
     // Find trending articles by favorite count with time filter
     @Query("SELECT a FROM Article a WHERE a.status = :status AND a.createdAt >= :startDate ORDER BY a.favoriteCount DESC")
     Page<Article> findTrendingByFavorites(@Param("status") ArticleStatus status, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+
+    // ==================== Search Methods ====================
+
+    /**
+     * Search articles by keyword in title or content.
+     * Case-insensitive search with LIKE matching.
+     *
+     * @param keyword  Search keyword
+     * @param status   Article status filter
+     * @param pageable Pagination parameters
+     * @return Page of matching articles
+     */
+    @Query("SELECT a FROM Article a WHERE a.status = :status AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Article> searchByKeyword(@Param("keyword") String keyword, @Param("status") ArticleStatus status, Pageable pageable);
+
+    /**
+     * Advanced search: keyword + author.
+     *
+     * @param keyword  Search keyword
+     * @param authorId Author ID
+     * @param status   Article status filter
+     * @param pageable Pagination parameters
+     * @return Page of matching articles
+     */
+    @Query("SELECT a FROM Article a WHERE a.status = :status AND a.authorId = :authorId AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Article> searchByKeywordAndAuthor(@Param("keyword") String keyword, @Param("authorId") String authorId, @Param("status") ArticleStatus status, Pageable pageable);
+
+    /**
+     * Advanced search: keyword + category.
+     *
+     * @param keyword  Search keyword
+     * @param category Category entity
+     * @param status   Article status filter
+     * @param pageable Pagination parameters
+     * @return Page of matching articles
+     */
+    @Query("SELECT a FROM Article a JOIN a.categories c WHERE a.status = :status AND c = :category AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Article> searchByKeywordAndCategory(@Param("keyword") String keyword, @Param("category") Category category, @Param("status") ArticleStatus status, Pageable pageable);
+
+    /**
+     * Advanced search: keyword + tag.
+     *
+     * @param keyword  Search keyword
+     * @param tag      Tag entity
+     * @param status   Article status filter
+     * @param pageable Pagination parameters
+     * @return Page of matching articles
+     */
+    @Query("SELECT a FROM Article a JOIN a.tags t WHERE a.status = :status AND t = :tag AND (LOWER(a.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(a.content) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<Article> searchByKeywordAndTag(@Param("keyword") String keyword, @Param("tag") Tag tag, @Param("status") ArticleStatus status, Pageable pageable);
 }

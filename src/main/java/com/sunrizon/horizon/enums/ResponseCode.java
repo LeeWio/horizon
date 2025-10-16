@@ -4,8 +4,28 @@ import lombok.Getter;
 
 /**
  * Standard API response codes.
- * Centralized management of common HTTP status codes and business-specific
- * error codes.
+ * <p>
+ * Code Convention:
+ * - 200: Success (generic)
+ * - 400-499: Client errors (HTTP standard codes)
+ * - 500-599: Server errors (HTTP standard codes)
+ * - 1000-9999: Business errors (custom codes by module)
+ *   - 1xxx: User module
+ *   - 2xxx: Article module
+ *   - 3xxx: Category/Series module
+ *   - 4xxx: Tag module
+ *   - 5xxx: Role module
+ *   - 6xxx: Permission module
+ *   - 7xxx: File module
+ *   - 8xxx: External services
+ *   - 9xxx: System management
+ *   - 10xxx: Social features (comment, interaction, follow, notification)
+ * <p>
+ * Best Practice:
+ * - Use SUCCESS for generic success responses
+ * - Use specific success codes (e.g., USER_CREATED) for operations that need explicit feedback
+ * - Use business error codes (1xxx-9xxx) for domain-specific errors
+ * - Use HTTP error codes (4xx, 5xx) for protocol-level errors
  */
 @Getter
 public enum ResponseCode {

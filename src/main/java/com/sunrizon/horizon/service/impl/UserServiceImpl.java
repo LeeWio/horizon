@@ -189,11 +189,11 @@ public class UserServiceImpl implements IUserService {
   public ResultResponse<Boolean> verifyOtp(String email, String otp) {
 
     if (!Validator.isEmail(email)) {
-      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD, false);
+      return ResultResponse.error(ResponseCode.USER_EMAIL_INVAILD);
     }
 
     if (StrUtil.isBlank(otp)) {
-      return ResultResponse.error(ResponseCode.INVALID_OTP, false);
+      return ResultResponse.error(ResponseCode.INVALID_OTP);
     }
 
     String redisKey = String.format(RedisContants.OTP_KEY_FORMAT, email);
@@ -201,7 +201,7 @@ public class UserServiceImpl implements IUserService {
     Optional<String> storedOtpOpt = redisUtil.get(redisKey, String.class);
     if (storedOtpOpt.isEmpty()) {
       // OTP not found in Redis (may have expired)
-      return ResultResponse.error(ResponseCode.OTP_EXPIRED, false);
+      return ResultResponse.error(ResponseCode.OTP_EXPIRED);
     }
 
     String storedOtp = storedOtpOpt.get();
@@ -209,7 +209,7 @@ public class UserServiceImpl implements IUserService {
       redisUtil.delete(redisKey);
       return ResultResponse.success(ResponseCode.OTP_VERIFIED, true);
     } else {
-      return ResultResponse.error(ResponseCode.INVALID_OTP, false);
+      return ResultResponse.error(ResponseCode.INVALID_OTP);
     }
   }
 

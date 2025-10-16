@@ -3,6 +3,7 @@ package com.sunrizon.horizon.service;
 import com.sunrizon.horizon.dto.CreateArticleRequest;
 import com.sunrizon.horizon.dto.UpdateArticleRequest;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.vo.ArticleDetailVO;
 import com.sunrizon.horizon.vo.ArticleVO;
 
 import java.util.List;
@@ -67,6 +68,14 @@ public interface IArticleService {
    * @return ResultResponse containing the ArticleVO matching the ID
    */
   ResultResponse<ArticleVO> getArticleById(String id);
+
+  /**
+   * Get article detail with SEO metadata by its ID.
+   *
+   * @param id The article ID to find
+   * @return ResultResponse containing the ArticleDetailVO with SEO metadata
+   */
+  ResultResponse<ArticleDetailVO> getArticleDetailWithSeo(String id);
 
   /**
    * Get trending articles by view count.
