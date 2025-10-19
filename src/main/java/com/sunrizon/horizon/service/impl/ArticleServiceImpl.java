@@ -97,6 +97,22 @@ public class ArticleServiceImpl implements IArticleService {
     // article.setAuthorId(request.getAuthorId());
 
     Article article = BeanUtil.copyProperties(request, Article.class);
+    
+    // Handle scheduled publishing
+    if (article.getStatus() == ArticleStatus.SCHEDULED && article.getPublishTime() == null) {
+      return ResultResponse.error(ResponseCode.ARTICLE_PUBLISH_TIME_REQUIRED_FOR_SCHEDULED);
+    }
+    
+    // If publish time is set but status is not SCHEDULED, adjust status
+    if (article.getPublishTime() != null && article.getStatus() != ArticleStatus.SCHEDULED) {
+      article.setStatus(ArticleStatus.SCHEDULED);
+    }
+    
+    // If status is SCHEDULED but publish time is in the past, publish immediately
+    if (article.getStatus() == ArticleStatus.SCHEDULED && article.getPublishTime() != null 
+        && article.getPublishTime().isBefore(LocalDateTime.now())) {
+      article.setStatus(ArticleStatus.PUBLISHED);
+    }
 
     // XSS防护：清理文章内容中的恶意代码
     if (StrUtil.isNotBlank(article.getContent())) {
@@ -199,9 +215,31 @@ public class ArticleServiceImpl implements IArticleService {
     if (StrUtil.isNotBlank(request.getCoverImage())) {
       article.setCoverImage(request.getCoverImage());
     }
-    if (request.getStatus() != null) {
+    
+    // Handle scheduled publishing
+    if (request.getStatus() == ArticleStatus.SCHEDULED && request.getPublishTime() == null 
+        && article.getPublishTime() == null) {
+      return ResultResponse.error(ResponseCode.ARTICLE_PUBLISH_TIME_REQUIRED_FOR_SCHEDULED);
+    }
+    
+    // If publish time is set but status is not SCHEDULED, adjust status
+    if (request.getPublishTime() != null && request.getStatus() != ArticleStatus.SCHEDULED) {
+      article.setStatus(ArticleStatus.SCHEDULED);
+    }
+    
+    // If status is SCHEDULED but publish time is in the past, publish immediately
+    if (request.getStatus() == ArticleStatus.SCHEDULED && request.getPublishTime() != null 
+        && request.getPublishTime().isBefore(LocalDateTime.now())) {
+      article.setStatus(ArticleStatus.PUBLISHED);
+    } else if (request.getStatus() != null) {
       article.setStatus(request.getStatus());
     }
+    
+    // Update publish time if provided
+    if (request.getPublishTime() != null) {
+      article.setPublishTime(request.getPublishTime());
+    }
+
     if (request.getIsFeatured() != null) {
       article.setIsFeatured(request.getIsFeatured());
     }

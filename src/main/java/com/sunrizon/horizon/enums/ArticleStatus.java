@@ -7,6 +7,7 @@ package com.sunrizon.horizon.enums;
  * DRAFT - Article is saved as draft, not published yet.
  * PUBLISHED - Article is published and visible to readers.
  * ARCHIVED - Article is archived or taken offline, but not deleted.
+ * SCHEDULED - Article is scheduled for future publishing.
  */
 public enum ArticleStatus {
 
@@ -20,5 +21,8 @@ public enum ArticleStatus {
   PUBLISHED,
 
   /** Article is archived or taken offline, but not deleted */
-  ARCHIVED;
+  ARCHIVED,
+  
+  /** Article is scheduled for future publishing */
+  SCHEDULED;
 }

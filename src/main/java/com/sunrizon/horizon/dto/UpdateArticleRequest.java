@@ -1,5 +1,7 @@
 package com.sunrizon.horizon.dto;
 
+import java.time.LocalDateTime;
+
 import com.sunrizon.horizon.enums.ArticleStatus;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -25,6 +27,8 @@ public class UpdateArticleRequest {
   private ArticleStatus status;
 
   private Boolean isFeatured;
+  
+  private LocalDateTime publishTime;
 
   private List<String> categoryIds;
 

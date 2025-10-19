@@ -68,6 +68,9 @@ public interface ArticleRepository extends JpaRepository<Article, String> {
     // Find trending articles by favorite count with time filter
     @Query("SELECT a FROM Article a WHERE a.status = :status AND a.createdAt >= :startDate ORDER BY a.favoriteCount DESC")
     Page<Article> findTrendingByFavorites(@Param("status") ArticleStatus status, @Param("startDate") LocalDateTime startDate, Pageable pageable);
+    
+    // Find scheduled articles that are due to be published
+    List<Article> findByStatusAndPublishTimeLessThanEqual(ArticleStatus status, LocalDateTime publishTime);
 
     // ==================== Search Methods ====================
 

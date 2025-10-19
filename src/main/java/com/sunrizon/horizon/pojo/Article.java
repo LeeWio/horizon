@@ -91,6 +91,9 @@ public class Article implements Serializable {
 
   @Column(name = "share_count", nullable = false)
   private Long shareCount = 0L;
+  
+  @Column(name = "publish_time")
+  private LocalDateTime publishTime;
 
   /** Categories associated with this article */
   @ManyToMany(fetch = FetchType.LAZY, cascade = { CascadeType.PERSIST, CascadeType.MERGE })

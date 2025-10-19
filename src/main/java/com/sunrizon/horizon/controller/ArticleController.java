@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.sunrizon.horizon.dto.CreateArticleRequest;
 import com.sunrizon.horizon.dto.UpdateArticleRequest;
 import com.sunrizon.horizon.service.IArticleService;
+import com.sunrizon.horizon.service.IScheduledPublishingService;
 import com.sunrizon.horizon.utils.ResultResponse;
 import com.sunrizon.horizon.vo.ArticleDetailVO;
 import com.sunrizon.horizon.vo.ArticleVO;
@@ -35,6 +36,9 @@ public class ArticleController {
 
   @Resource
   private IArticleService articleService;
+  
+  @Resource
+  private IScheduledPublishingService scheduledPublishingService;
 
   /**
    * Create a new article.
@@ -143,5 +147,15 @@ public class ArticleController {
       default -> articleService.getTrendingByViews(timeRange, pageable);
     };
   }
-
+  
+  /**
+   * Manually trigger scheduled article publishing.
+   *
+   * @return ResultResponse with the number of articles published
+   */
+  @PostMapping("/publish-scheduled")
+  @Operation(summary = "Manually trigger scheduled article publishing")
+  public ResultResponse<Integer> publishScheduledArticles() {
+    return scheduledPublishingService.publishScheduledArticles();
+  }
 }

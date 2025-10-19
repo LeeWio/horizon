@@ -8,25 +8,33 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 /**
- * Unified API response wrapper.
+ * Unified API response wrapper for SUCCESSFUL operations.
+ *
  * <p>
- * Best Practice: Use this ONLY for successful responses.
- * For errors, throw BusinessException and let GlobalExceptionHandler handle it.
+ * <b>Best Practice:</b>
+ * <ul>
+ * <li>Use this class ONLY for successful responses.</li>
+ * <li>For errors, throw {@code BusinessException} or other custom exceptions,
+ * and let {@code @ControllerAdvice} handle them globally.</li>
+ * <li>Never manually construct error responses with this class.</li>
+ * </ul>
+ *
+ * @param <T> the type of response data
  */
 @Getter
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ResultResponse<T> {
 
-  /** Business status code */
+  /** Business status code (e.g., 200, 201) */
   private final int code;
-  
-  /** Response message */
+
+  /** Human-readable message */
   private final String message;
-  
-  /** Response data (null for errors) */
+
+  /** Response payload (may be null if no data) */
   private final T data;
-  
-  /** Response timestamp */
+
+  /** ISO 8601 formatted timestamp of the response */
   private final LocalDateTime timestamp;
 
   private ResultResponse(int code, String message, T data) {
@@ -36,67 +44,107 @@ public class ResultResponse<T> {
     this.timestamp = LocalDateTime.now();
   }
 
-  // ==================== Success Methods ====================
-  
+  // ==================== Success Factories (Recommended) ====================
+
   /**
-   * Create success response with default SUCCESS code.
+   * Returns a success response with default SUCCESS code and no data.
    */
   public static <T> ResultResponse<T> success() {
-    return new ResultResponse<>(ResponseCode.SUCCESS.getStatus(), 
-        ResponseCode.SUCCESS.getMessage(), null);
+    return new ResultResponse<>(
+        ResponseCode.SUCCESS.getStatus(),
+        ResponseCode.SUCCESS.getMessage(),
+        null);
   }
 
   /**
-   * Create success response with data.
-   */
-  public static <T> ResultResponse<T> success(T data) {
-    return new ResultResponse<>(ResponseCode.SUCCESS.getStatus(), 
-        ResponseCode.SUCCESS.getMessage(), data);
-  }
-
-  /**
-   * Create success response with custom code and data.
-   */
-  public static <T> ResultResponse<T> success(ResponseCode responseCode, T data) {
-    return new ResultResponse<>(responseCode.getStatus(), 
-        responseCode.getMessage(), data);
-  }
-
-  /**
-   * Create success response with custom code (no data).
+   * Returns a success response with custom message and no data (uses SUCCESS
+   * code).
    */
   public static <T> ResultResponse<T> success(ResponseCode responseCode) {
-    return new ResultResponse<>(responseCode.getStatus(), 
-        responseCode.getMessage(), null);
+    return new ResultResponse<>(
+        responseCode.getStatus(),
+        responseCode.getMessage(),
+        null);
   }
 
-  // ==================== Error Methods (Deprecated) ====================
-  
   /**
-   * @deprecated Use throw new BusinessException(responseCode) instead.
-   * This method is kept for backward compatibility only.
+   * Returns a success response with default SUCCESS code and given data.
    */
-  @Deprecated
+  public static <T> ResultResponse<T> success(T data) {
+    return new ResultResponse<>(
+        ResponseCode.SUCCESS.getStatus(),
+        ResponseCode.SUCCESS.getMessage(),
+        data);
+  }
+
+  /**
+   * Returns a success response with custom message and data (uses SUCCESS code).
+   */
+  public static <T> ResultResponse<T> success(String customMessage, T data) {
+    return new ResultResponse<>(
+        ResponseCode.SUCCESS.getStatus(),
+        customMessage,
+        data);
+  }
+
+  // ==================== Business Success (Non-200 Success Codes)
+  // ====================
+
+  /**
+   * Returns a business success response using a custom {@link ResponseCode}
+   * (e.g., CREATED, ACCEPTED).
+   * <p>
+   * Only use this for non-error, non-200 success scenarios (e.g., 201 Created).
+   */
+  public static <T> ResultResponse<T> of(ResponseCode responseCode, T data) {
+    if (responseCode == null) {
+      throw new IllegalArgumentException("ResponseCode must not be null");
+    }
+    return new ResultResponse<>(
+        responseCode.getStatus(),
+        responseCode.getMessage(),
+        data);
+  }
+
+  /**
+   * Returns a business success response with custom message (uses given
+   * {@link ResponseCode}).
+   */
+  public static <T> ResultResponse<T> of(ResponseCode responseCode, String customMessage, T data) {
+    if (responseCode == null) {
+      throw new IllegalArgumentException("ResponseCode must not be null");
+    }
+    return new ResultResponse<>(
+        responseCode.getStatus(),
+        customMessage != null ? customMessage : responseCode.getMessage(),
+        data);
+  }
+
+  // ==================== Deprecated: Error Construction (Avoid!)
+  // ====================
+
+  /**
+   * @deprecated Use {@code throw new BusinessException(responseCode)} instead.
+   *             This method exists only for backward compatibility.
+   */
+  @Deprecated(since = "1.0", forRemoval = true)
   public static <T> ResultResponse<T> error(ResponseCode responseCode) {
-    return new ResultResponse<>(responseCode.getStatus(), 
-        responseCode.getMessage(), null);
+    return new ResultResponse<>(
+        responseCode.getStatus(),
+        responseCode.getMessage(),
+        null);
   }
 
   /**
-   * @deprecated Use throw new BusinessException(responseCode, message) instead.
-   * This method is kept for backward compatibility only.
+   * @deprecated Use {@code throw new BusinessException(responseCode, message)}
+   *             instead.
    */
-  @Deprecated
+  @Deprecated(since = "1.0", forRemoval = true)
   public static <T> ResultResponse<T> error(ResponseCode responseCode, String message) {
-    return new ResultResponse<>(responseCode.getStatus(), message, null);
+    return new ResultResponse<>(
+        responseCode.getStatus(),
+        message,
+        null);
   }
 
-  // ==================== Utility Methods ====================
-  
-  /**
-   * Check if this response represents success.
-   */
-  public boolean isSuccess() {
-    return code == ResponseCode.SUCCESS.getStatus();
-  }
 }

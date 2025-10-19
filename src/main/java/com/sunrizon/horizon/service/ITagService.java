@@ -34,8 +34,8 @@ public interface ITagService {
    * @param pageable pagination info (page number, size, sort)
    * @return ResultResponse containing a page of TagVO
    */
-  ResultResponse<List<TagVO>> getTags(Pageable pageable);
-  
+  ResultResponse<Page<TagVO>> getTags(Pageable pageable);
+
   /**
    * Get all tags (non-paginated).
    *

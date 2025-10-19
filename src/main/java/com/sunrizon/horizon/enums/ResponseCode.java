@@ -72,6 +72,7 @@ public enum ResponseCode {
   ARTICLE_UPDATED_SUCCESSFULLY(2007, "Article updated successfully"),
   ARTICLE_DELETED_SUCCESSFULLY(2008, "Article deleted successfully"),
   ARTICLE_ID_CANNOT_BE_EMPTY(2009, "Article ID cannot be empty"),
+  ARTICLE_PUBLISH_TIME_REQUIRED_FOR_SCHEDULED(2010, "Publish time is required for scheduled articles"),
 
   // ==================== Category Errors ====================
   CATEGORY_NOT_FOUND(3001, "Category not found"),

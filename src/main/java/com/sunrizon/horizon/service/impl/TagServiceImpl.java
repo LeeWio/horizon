@@ -6,6 +6,8 @@ import cn.hutool.core.util.StrUtil;
 import com.sunrizon.horizon.dto.CreateTagRequest;
 import com.sunrizon.horizon.dto.UpdateTagRequest;
 import com.sunrizon.horizon.enums.ResponseCode;
+import com.sunrizon.horizon.exception.BusinessException;
+import com.sunrizon.horizon.exception.ResourceNotFoundException;
 import com.sunrizon.horizon.pojo.Tag;
 import com.sunrizon.horizon.repository.TagRepository;
 import com.sunrizon.horizon.service.ITagService;
@@ -17,6 +19,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -47,29 +50,30 @@ public class TagServiceImpl implements ITagService {
   @Override
   @Transactional
   public ResultResponse<TagVO> createTag(CreateTagRequest request) {
+    // Validate required fields
+    if (StrUtil.isBlank(request.getName())) {
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Tag name is required");
+    }
+
     // Check name uniqueness
     if (tagRepository.existsByName(request.getName())) {
-      return ResultResponse.error(ResponseCode.TAG_NAME_EXISTS);
+      throw new BusinessException(ResponseCode.TAG_NAME_EXISTS);
     }
 
     // Check slug uniqueness if provided
     if (StrUtil.isNotBlank(request.getSlug()) && tagRepository.existsBySlug(request.getSlug())) {
-      return ResultResponse.error(ResponseCode.TAG_SLUG_EXISTS);
+      throw new BusinessException(ResponseCode.TAG_SLUG_EXISTS);
     }
 
     Tag tag = BeanUtil.copyProperties(request, Tag.class);
-
-    // If slug is not provided, generate it from name
-    if (StrUtil.isBlank(tag.getSlug())) {
-      tag.setSlug(generateSlugFromName(request.getName()));
-    }
 
     // Save tag
     Tag savedTag = tagRepository.save(tag);
 
     // Convert to VO and return
     TagVO tagVO = BeanUtil.copyProperties(savedTag, TagVO.class);
-    return ResultResponse.success(ResponseCode.TAG_CREATED, tagVO);
+
+    return ResultResponse.of(ResponseCode.TAG_CREATED, tagVO);
   }
 
   /**
@@ -82,12 +86,13 @@ public class TagServiceImpl implements ITagService {
   public ResultResponse<TagVO> getTag(String tid) {
     // Validate input
     if (StrUtil.isBlank(tid)) {
-      return ResultResponse.error(ResponseCode.TAG_ID_CANNOT_BE_EMPTY);
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Tag ID is required");
     }
 
     // Load tag by ID
-    Tag tag = tagRepository.findById(tid)
-        .orElseThrow(() -> new RuntimeException("Tag not found with tid: " + tid));
+    Tag tag = tagRepository
+        .findById(tid)
+        .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.TAG_NOT_FOUND, "Tag not found with tid: " + tid));
 
     // Map entity to VO
     TagVO tagVO = BeanUtil.copyProperties(tag, TagVO.class);
@@ -103,17 +108,20 @@ public class TagServiceImpl implements ITagService {
    * @return {@link ResultResponse} with paginated {@link TagVO} list
    */
   @Override
-  public ResultResponse<List<TagVO>> getTags(Pageable pageable) {
+  public ResultResponse<Page<TagVO>> getTags(Pageable pageable) {
+    // Validate input
+    if (pageable == null) {
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Pageable parameter is required");
+    }
+
     // Fetch paginated tags
     Page<Tag> tagPage = tagRepository.findAll(pageable);
 
-    // Map entity to VO list
-    List<TagVO> voList = tagPage.getContent().stream()
-        .map(tag -> BeanUtil.copyProperties(tag, TagVO.class))
-        .collect(java.util.stream.Collectors.toList());
+    // Map entity to VO page
+    Page<TagVO> voPage = tagPage.map(tag -> BeanUtil.copyProperties(tag, TagVO.class));
 
     // Return response
-    return ResultResponse.success(voList);
+    return ResultResponse.success(voPage);
   }
 
   /**
@@ -127,12 +135,12 @@ public class TagServiceImpl implements ITagService {
   public ResultResponse<String> deleteTag(String tid) {
     // Validate input
     if (StrUtil.isBlank(tid)) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST, "Tag ID is required");
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Tag ID is required");
     }
 
     // Find tag
     Tag tag = tagRepository.findById(tid)
-        .orElseThrow(() -> new RuntimeException("Tag not found with ID: " + tid));
+        .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.TAG_NOT_FOUND, "Tag not found with ID: " + tid));
 
     // Delete tag
     tagRepository.delete(tag);
@@ -152,33 +160,14 @@ public class TagServiceImpl implements ITagService {
   public ResultResponse<String> updateTag(String tid, UpdateTagRequest request) {
     // Validate input
     if (StrUtil.isBlank(tid)) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST, "Tag ID is required");
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Tag ID is required");
     }
 
     // Find tag
     Tag tag = tagRepository.findById(tid)
-        .orElseThrow(() -> new RuntimeException("Tag not found with ID: " + tid));
+        .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.TAG_NOT_FOUND, "Tag not found with ID: " + tid));
 
-    // Check name uniqueness if name is being updated
-    if (StrUtil.isNotBlank(request.getName()) && !request.getName().equals(tag.getName())) {
-      if (tagRepository.existsByName(request.getName())) {
-        return ResultResponse.error(ResponseCode.TAG_NAME_EXISTS);
-      }
-      tag.setName(request.getName());
-    }
-
-    // Check slug uniqueness if slug is being updated
-    if (StrUtil.isNotBlank(request.getSlug()) && !request.getSlug().equals(tag.getSlug())) {
-      if (tagRepository.existsBySlug(request.getSlug())) {
-        return ResultResponse.error(ResponseCode.TAG_SLUG_EXISTS);
-      }
-      tag.setSlug(request.getSlug());
-    }
-
-    // Update description if provided
-    if (StrUtil.isNotBlank(request.getDescription())) {
-      tag.setDescription(request.getDescription());
-    }
+    BeanUtil.copyProperties(request, tag, "tid");
 
     // Save changes
     tagRepository.saveAndFlush(tag);
@@ -195,15 +184,14 @@ public class TagServiceImpl implements ITagService {
   @Override
   public ResultResponse<TagVO> getTagByName(String name) {
     if (StrUtil.isBlank(name)) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST);
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Tag name is required");
     }
 
-    Tag tag = tagRepository.findByName(name);
-    if (tag == null) {
-      return ResultResponse.error(ResponseCode.TAG_NOT_FOUND);
-    }
+    Tag tag = tagRepository.findByName(name).orElseThrow(
+        () -> new ResourceNotFoundException(ResponseCode.TAG_NOT_FOUND, "Tag not found with name: " + name));
 
     TagVO tagVO = BeanUtil.copyProperties(tag, TagVO.class);
+
     return ResultResponse.success(tagVO);
   }
 
@@ -216,15 +204,14 @@ public class TagServiceImpl implements ITagService {
   @Override
   public ResultResponse<TagVO> getTagBySlug(String slug) {
     if (StrUtil.isBlank(slug)) {
-      return ResultResponse.error(ResponseCode.BAD_REQUEST);
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Tag slug is required");
     }
 
-    Tag tag = tagRepository.findBySlug(slug);
-    if (tag == null) {
-      return ResultResponse.error(ResponseCode.TAG_NOT_FOUND);
-    }
+    Tag tag = tagRepository.findBySlug(slug).orElseThrow(
+        () -> new ResourceNotFoundException(ResponseCode.TAG_NOT_FOUND, "Tag not found with slug: " + slug));
 
     TagVO tagVO = BeanUtil.copyProperties(tag, TagVO.class);
+
     return ResultResponse.success(tagVO);
   }
 
@@ -245,19 +232,5 @@ public class TagServiceImpl implements ITagService {
 
     // Return response
     return ResultResponse.success(voList);
-  }
-
-  /**
-   * Generate a slug from a name by converting to lowercase and replacing spaces
-   * with hyphens.
-   *
-   * @param name The original name
-   * @return Generated slug
-   */
-  private String generateSlugFromName(String name) {
-    if (StrUtil.isBlank(name)) {
-      return "";
-    }
-    return name.trim().toLowerCase().replaceAll("[^a-z0-9\\s-]", "").replaceAll("\\s+", "-");
   }
 }

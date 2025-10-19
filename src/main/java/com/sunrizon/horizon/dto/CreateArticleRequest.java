@@ -1,5 +1,6 @@
 package com.sunrizon.horizon.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.sunrizon.horizon.enums.ArticleStatus;
@@ -26,6 +27,8 @@ public class CreateArticleRequest {
   private String coverImage;
 
   private ArticleStatus status = ArticleStatus.DRAFT;
+  
+  private LocalDateTime publishTime;
 
   @NotBlank(message = "Author ID is required")
   private String authorId;
