@@ -222,6 +222,7 @@ public class TagServiceImpl implements ITagService {
    */
   @Override
   public ResultResponse<List<TagVO>> getAllTags() {
+
     // Fetch all tags
     List<Tag> tags = tagRepository.findAll();
 
