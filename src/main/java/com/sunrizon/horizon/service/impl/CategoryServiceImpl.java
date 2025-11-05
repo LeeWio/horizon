@@ -6,6 +6,8 @@ import cn.hutool.core.util.StrUtil;
 import com.sunrizon.horizon.dto.CreateCategoryRequest;
 import com.sunrizon.horizon.dto.UpdateCategoryRequest;
 import com.sunrizon.horizon.enums.ResponseCode;
+import com.sunrizon.horizon.exception.BusinessException;
+import com.sunrizon.horizon.exception.ResourceNotFoundException;
 import com.sunrizon.horizon.pojo.Category;
 import com.sunrizon.horizon.repository.CategoryRepository;
 import com.sunrizon.horizon.service.ICategoryService;
@@ -49,27 +51,22 @@ public class CategoryServiceImpl implements ICategoryService {
   public ResultResponse<CategoryVO> createCategory(CreateCategoryRequest request) {
     // Check name uniqueness
     if (categoryRepository.existsByName(request.getName())) {
-      return ResultResponse.error(ResponseCode.CATEGORY_NAME_EXISTS);
+      throw new BusinessException(ResponseCode.CATEGORY_NAME_EXISTS);
     }
 
     // Check slug uniqueness if provided
     if (StrUtil.isNotBlank(request.getSlug()) && categoryRepository.existsBySlug(request.getSlug())) {
-      return ResultResponse.error(ResponseCode.CATEGORY_NAME_EXISTS);
+      throw new BusinessException(ResponseCode.CATEGORY_NAME_EXISTS);
     }
 
     // Map DTO to Entity
-
     Category category = BeanUtil.copyProperties(request, Category.class);
-
-    // If slug is not provided, generate it from name
-    if (StrUtil.isBlank(category.getSlug())) {
-      category.setSlug(generateSlugFromName(request.getName()));
-    }
 
     // Set parent category if provided
     if (StrUtil.isNotBlank(request.getParentId())) {
       Category parentCategory = categoryRepository.findById(request.getParentId())
-          .orElseThrow(() -> new RuntimeException("Parent category not found with ID: " + request.getParentId()));
+          .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
+              String.format("Parent category not found with ID: %s", request.getParentId())));
       category.setParent(parentCategory);
     }
 
@@ -78,11 +75,12 @@ public class CategoryServiceImpl implements ICategoryService {
 
     // Convert to VO and return
     CategoryVO categoryVO = BeanUtil.copyProperties(savedCategory, CategoryVO.class);
+
     // Set parent ID for VO
     if (savedCategory.getParent() != null) {
       categoryVO.setParentId(savedCategory.getParent().getCid());
     }
-    return ResultResponse.success(ResponseCode.CATEGORY_CREATED, categoryVO);
+    return ResultResponse.of(ResponseCode.CATEGORY_CREATED, categoryVO);
   }
 
   /**
@@ -95,12 +93,13 @@ public class CategoryServiceImpl implements ICategoryService {
   public ResultResponse<CategoryVO> getCategory(String cid) {
     // Validate input
     if (StrUtil.isBlank(cid)) {
-      return ResultResponse.error(ResponseCode.CATEGORY_ID_CANNOT_BE_EMPTY);
+      throw new BusinessException(ResponseCode.CATEGORY_ID_CANNOT_BE_EMPTY);
     }
 
     // Load category by ID
     Category category = categoryRepository.findById(cid)
-        .orElseThrow(() -> new RuntimeException("Category not found with cid: " + cid));
+        .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
+            "Category not found with cid: " + cid));
 
     // Map entity to VO
     CategoryVO categoryVO = BeanUtil.copyProperties(category, CategoryVO.class);
@@ -121,6 +120,11 @@ public class CategoryServiceImpl implements ICategoryService {
    */
   @Override
   public ResultResponse<Page<CategoryVO>> getCategories(Pageable pageable) {
+    // Validate input
+    if (pageable == null) {
+      throw new BusinessException(ResponseCode.BAD_REQUEST, "Pageable parameter is required");
+    }
+
     // Fetch paginated categories
     Page<Category> categoryPage = categoryRepository.findAll(pageable);
 
@@ -149,12 +153,13 @@ public class CategoryServiceImpl implements ICategoryService {
   public ResultResponse<String> deleteCategory(String cid) {
     // Validate input
     if (StrUtil.isBlank(cid)) {
-      return ResultResponse.error(ResponseCode.CATEGORY_ID_CANNOT_BE_EMPTY);
+      throw new BusinessException(ResponseCode.CATEGORY_ID_CANNOT_BE_EMPTY);
     }
 
     // Find category
     Category category = categoryRepository.findById(cid)
-        .orElseThrow(() -> new RuntimeException("Category not found with ID: " + cid));
+        .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
+            "Category not found with ID: " + cid));
 
     // Check if category has associated articles (add this logic if needed)
     // This would require the relationship to be loaded to check if there are any
@@ -163,7 +168,7 @@ public class CategoryServiceImpl implements ICategoryService {
     // Delete category
     categoryRepository.delete(category);
 
-    return ResultResponse.success(ResponseCode.CATEGORY_DELETED_SUCCESSFULLY);
+    return ResultResponse.success(ResponseCode.CATEGORY_DELETED_SUCCESSFULLY.getMessage());
   }
 
   /**
@@ -178,17 +183,18 @@ public class CategoryServiceImpl implements ICategoryService {
   public ResultResponse<String> updateCategory(String cid, UpdateCategoryRequest request) {
     // Validate input
     if (StrUtil.isBlank(cid)) {
-      return ResultResponse.error(ResponseCode.CATEGORY_ID_CANNOT_BE_EMPTY);
+      throw new BusinessException(ResponseCode.CATEGORY_ID_CANNOT_BE_EMPTY);
     }
 
     // Find category
     Category category = categoryRepository.findById(cid)
-        .orElseThrow(() -> new RuntimeException("Category not found with ID: " + cid));
+        .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
+            "Category not found with ID: " + cid));
 
     // Check name uniqueness if name is being updated
     if (StrUtil.isNotBlank(request.getName()) && !request.getName().equals(category.getName())) {
       if (categoryRepository.existsByName(request.getName())) {
-        return ResultResponse.error(ResponseCode.CATEGORY_NAME_EXISTS);
+        throw new BusinessException(ResponseCode.CATEGORY_NAME_EXISTS);
       }
       category.setName(request.getName());
     }
@@ -196,7 +202,7 @@ public class CategoryServiceImpl implements ICategoryService {
     // Check slug uniqueness if slug is being updated
     if (StrUtil.isNotBlank(request.getSlug()) && !request.getSlug().equals(category.getSlug())) {
       if (categoryRepository.existsBySlug(request.getSlug())) {
-        return ResultResponse.error(ResponseCode.CATEGORY_NAME_EXISTS);
+        throw new BusinessException(ResponseCode.CATEGORY_NAME_EXISTS);
       }
       category.setSlug(request.getSlug());
     }
@@ -214,7 +220,7 @@ public class CategoryServiceImpl implements ICategoryService {
       } else {
         // Find and set the new parent
         Category parentCategory = categoryRepository.findById(request.getParentId())
-            .orElseThrow(() -> new RuntimeException(
+            .orElseThrow(() -> new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
                 String.format("Parent category not found with ID: %s", request.getParentId())));
         category.setParent(parentCategory);
       }
@@ -223,7 +229,7 @@ public class CategoryServiceImpl implements ICategoryService {
     // Save changes
     categoryRepository.saveAndFlush(category);
 
-    return ResultResponse.success(ResponseCode.CATEGORY_UPDATED_SUCCESSFULLY);
+    return ResultResponse.success(ResponseCode.CATEGORY_UPDATED_SUCCESSFULLY.getMessage());
   }
 
   /**
@@ -235,12 +241,13 @@ public class CategoryServiceImpl implements ICategoryService {
   @Override
   public ResultResponse<CategoryVO> getCategoryByName(String name) {
     if (StrUtil.isBlank(name)) {
-      return ResultResponse.error(ResponseCode.CATEGORY_NAME_REQUIRED);
+      throw new BusinessException(ResponseCode.CATEGORY_NAME_REQUIRED);
     }
 
     Category category = categoryRepository.findByName(name);
     if (category == null) {
-      return ResultResponse.error(ResponseCode.CATEGORY_NOT_FOUND);
+      throw new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
+          "Category not found with name: " + name);
     }
 
     CategoryVO categoryVO = BeanUtil.copyProperties(category, CategoryVO.class);
@@ -260,12 +267,13 @@ public class CategoryServiceImpl implements ICategoryService {
   @Override
   public ResultResponse<CategoryVO> getCategoryBySlug(String slug) {
     if (StrUtil.isBlank(slug)) {
-      return ResultResponse.error(ResponseCode.CATEGORY_SLUG_REQUIRED);
+      throw new BusinessException(ResponseCode.CATEGORY_SLUG_REQUIRED);
     }
 
     Category category = categoryRepository.findBySlug(slug);
     if (category == null) {
-      return ResultResponse.error(ResponseCode.CATEGORY_NOT_FOUND);
+      throw new ResourceNotFoundException(ResponseCode.CATEGORY_NOT_FOUND,
+          "Category not found with slug: " + slug);
     }
 
     CategoryVO categoryVO = BeanUtil.copyProperties(category, CategoryVO.class);

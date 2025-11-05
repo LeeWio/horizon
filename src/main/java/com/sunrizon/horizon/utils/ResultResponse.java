@@ -44,6 +44,13 @@ public class ResultResponse<T> {
     this.timestamp = LocalDateTime.now();
   }
 
+  /**
+   * Returns true if the response code indicates success (2xx range).
+   */
+  public boolean isSuccess() {
+    return code >= 200 && code < 300;
+  }
+
   // ==================== Success Factories (Recommended) ====================
 
   /**

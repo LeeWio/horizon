@@ -173,7 +173,7 @@ public class UserServiceImpl implements IUserService {
 
     // Convert to VO and return
     UserVO userVO = BeanUtil.copyProperties(savedUser, UserVO.class);
-    return ResultResponse.success(ResponseCode.USER_CREATED, userVO);
+    return ResultResponse.of(ResponseCode.USER_CREATED, userVO);
   }
 
   /**
@@ -207,7 +207,7 @@ public class UserServiceImpl implements IUserService {
     String storedOtp = storedOtpOpt.get();
     if (StrUtil.equals(storedOtp, otp)) {
       redisUtil.delete(redisKey);
-      return ResultResponse.success(ResponseCode.OTP_VERIFIED, true);
+      return ResultResponse.of(ResponseCode.OTP_VERIFIED, true);
     } else {
       return ResultResponse.error(ResponseCode.INVALID_OTP);
     }
@@ -256,7 +256,7 @@ public class UserServiceImpl implements IUserService {
     AuthVO authVO = new AuthVO(authorization, user.getUid(),
         user.getEmail(), user.getUsername());
 
-    return ResultResponse.success(ResponseCode.LOGIN_SUCCESS, authVO);
+    return ResultResponse.of(ResponseCode.LOGIN_SUCCESS, authVO);
   }
 
   /**
@@ -283,7 +283,7 @@ public class UserServiceImpl implements IUserService {
 
     // Skip if already same status
     if (currentStatus == status) {
-      return ResultResponse.success(ResponseCode.USER_STATUS_ALREADY, "User status is already " + status);
+      return ResultResponse.of(ResponseCode.USER_STATUS_ALREADY, "User status is already " + status, null);
     }
 
     // Validate allowed transitions
@@ -296,8 +296,8 @@ public class UserServiceImpl implements IUserService {
     // Save changes
     userRepository.saveAndFlush(user);
 
-    return ResultResponse.success(ResponseCode.USER_STATUS_UPDATED_SUCCESSFULLY,
-        "User status updated successfully to " + status);
+    return ResultResponse.of(ResponseCode.USER_STATUS_UPDATED_SUCCESSFULLY,
+        "User status updated successfully to " + status, null);
   }
 
   /**
@@ -626,7 +626,7 @@ public class UserServiceImpl implements IUserService {
     // emailService.sendUserAuditResult(user.getEmail(), status, reason);
 
     String message = String.format("User %s successfully", action);
-    return ResultResponse.success(ResponseCode.SUCCESS, message);
+    return ResultResponse.success(message, null);
   }
 
   /**
@@ -639,7 +639,7 @@ public class UserServiceImpl implements IUserService {
   public ResultResponse<Page<UserVO>> getPendingUsers(Pageable pageable) {
     Page<User> userPage = userRepository.findByStatus(UserStatus.PENDING, pageable);
     Page<UserVO> userVOPage = userPage.map(user -> BeanUtil.copyProperties(user, UserVO.class));
-    return ResultResponse.success(ResponseCode.SUCCESS, userVOPage);
+    return ResultResponse.success(userVOPage);
   }
 
 }

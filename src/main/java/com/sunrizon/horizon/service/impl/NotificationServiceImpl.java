@@ -83,7 +83,7 @@ public class NotificationServiceImpl implements INotificationService {
       log.warn("Failed to send WebSocket notification to user: {}", userId, e);
     }
 
-    return ResultResponse.success(ResponseCode.NOTIFICATION_CREATED, vo);
+    return ResultResponse.of(ResponseCode.NOTIFICATION_CREATED, vo);
   }
 
   @Override

@@ -34,13 +34,13 @@ public class FileServiceImpl implements IFileService {
 
   @Override
   @Transactional
-  public ResultResponse<FileVO> uploadFile(MultipartFile multipartFile, String uploadUserId) {
-    return uploadFile(multipartFile, uploadUserId, null);
+  public ResultResponse<FileVO> uploadFile(MultipartFile multipartFile) {
+    return uploadFile(multipartFile, null);
   }
 
   @Override
   @Transactional
-  public ResultResponse<FileVO> uploadFile(MultipartFile multipartFile, String uploadUserId, String description) {
+  public ResultResponse<FileVO> uploadFile(MultipartFile multipartFile, String description) {
     try {
       // 1. 参数验证
       if (multipartFile == null || multipartFile.isEmpty()) {
@@ -93,7 +93,7 @@ public class FileServiceImpl implements IFileService {
       // 7. 转换为VO
       FileVO fileVO = BeanUtil.copyProperties(savedFile, FileVO.class);
 
-      return ResultResponse.success(ResponseCode.FILE_UPLOAD_SUCCESS, fileVO);
+      return ResultResponse.of(ResponseCode.FILE_UPLOAD_SUCCESS, fileVO);
 
     } catch (IOException e) {
       return ResultResponse.error(ResponseCode.FILE_UPLOAD_FAILED);

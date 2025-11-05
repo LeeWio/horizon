@@ -77,7 +77,7 @@ public class InteractionServiceImpl implements IInteractionService {
 
     // 8. 返回对应的成功消息
     ResponseCode responseCode = getSuccessResponseCode(type, true);
-    return ResultResponse.success(responseCode, vo);
+    return ResultResponse.of(responseCode, vo);
   }
 
   @Override
@@ -317,7 +317,7 @@ public class InteractionServiceImpl implements IInteractionService {
     // 9. 转换为VO
     InteractionVO vo = BeanUtil.copyProperties(saved, InteractionVO.class);
 
-    return ResultResponse.success(ResponseCode.SUCCESS, vo);
+    return ResultResponse.success(vo);
   }
 
   @Override

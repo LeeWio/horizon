@@ -3,6 +3,7 @@ package com.sunrizon.horizon.controller;
 import com.sunrizon.horizon.enums.FileStatus;
 import com.sunrizon.horizon.service.IFileService;
 import com.sunrizon.horizon.utils.ResultResponse;
+import com.sunrizon.horizon.utils.SecurityContextUtil;
 import com.sunrizon.horizon.vo.FileVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,7 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -28,6 +28,9 @@ public class FileController {
   @Resource
   private IFileService fileService;
 
+  @Resource
+  private SecurityContextUtil securityContextUtil;
+
   /**
    * 上传文件
    */
@@ -35,10 +38,8 @@ public class FileController {
   @Operation(summary = "Upload file", description = "Upload a file (image, document, etc.)")
   public ResultResponse<FileVO> uploadFile(
       @RequestParam("file") MultipartFile file,
-      @RequestParam(value = "description", required = false) String description,
-      Authentication authentication) {
-    String userId = authentication != null ? authentication.getName() : null;
-    return fileService.uploadFile(file, userId, description);
+      @RequestParam(value = "description", required = false) String description) {
+    return fileService.uploadFile(file, description);
   }
 
   /**
@@ -55,9 +56,10 @@ public class FileController {
    */
   @GetMapping("/my-files")
   @Operation(summary = "Get my files", description = "Get all files uploaded by current user")
-  public ResultResponse<List<FileVO>> getMyFiles(Authentication authentication) {
-    String userId = authentication.getName();
-    return fileService.getFilesByUserId(userId);
+  public ResultResponse<List<FileVO>> getMyFiles() {
+    String currentUserId = securityContextUtil.getCurrentUserId()
+        .orElseThrow(() -> new RuntimeException("User not authenticated"));
+    return fileService.getFilesByUserId(currentUserId);
   }
 
   /**

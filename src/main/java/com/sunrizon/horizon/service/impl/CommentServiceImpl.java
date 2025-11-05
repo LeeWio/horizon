@@ -132,7 +132,7 @@ public class CommentServiceImpl implements ICommentService {
     CommentVO commentVO = BeanUtil.copyProperties(savedComment, CommentVO.class);
 
     // 7. 返回统一响应
-    return ResultResponse.success(ResponseCode.COMMENT_CREATED, commentVO);
+    return ResultResponse.of(ResponseCode.COMMENT_CREATED, commentVO);
   }
 
   /**

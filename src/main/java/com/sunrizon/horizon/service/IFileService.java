@@ -15,12 +15,12 @@ public interface IFileService {
   /**
    * 上传文件并保存信息
    */
-  ResultResponse<FileVO> uploadFile(MultipartFile multipartFile, String uploadUserId);
+  ResultResponse<FileVO> uploadFile(MultipartFile multipartFile);
 
   /**
    * 上传文件并保存信息，带描述
    */
-  ResultResponse<FileVO> uploadFile(MultipartFile multipartFile, String uploadUserId, String description);
+  ResultResponse<FileVO> uploadFile(MultipartFile multipartFile, String description);
 
   /**
    * 根据ID查找文件

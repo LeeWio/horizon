@@ -156,7 +156,7 @@ public class ArticleServiceImpl implements IArticleService {
 
     // Convert to VO and return
     ArticleVO articleVO = BeanUtil.copyProperties(savedArticle, ArticleVO.class);
-    return ResultResponse.success(ResponseCode.SUCCESS, articleVO);
+    return ResultResponse.success(articleVO);
   }
 
   /**

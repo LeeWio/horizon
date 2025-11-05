@@ -75,7 +75,7 @@ public class SeriesServiceImpl implements ISeriesService {
 
         // Convert to VO and return
         SeriesVO seriesVO = BeanUtil.copyProperties(savedSeries, SeriesVO.class);
-        return ResultResponse.success(ResponseCode.SERIES_CREATED, seriesVO);
+        return ResultResponse.of(ResponseCode.SERIES_CREATED, seriesVO);
     }
 
     /**

@@ -85,7 +85,7 @@ public class FollowServiceImpl implements IFollowService {
     vo.setUsername(following.getUsername());
     vo.setAvatar(following.getAvatar());
 
-    return ResultResponse.success(ResponseCode.USER_FOLLOWED, vo);
+    return ResultResponse.of(ResponseCode.USER_FOLLOWED, vo);
   }
 
   /**
@@ -125,7 +125,7 @@ public class FollowServiceImpl implements IFollowService {
       log.error("Failed to update follow count", e);
     }
 
-    return ResultResponse.success(ResponseCode.USER_UNFOLLOWED, "Unfollowed successfully");
+    return ResultResponse.of(ResponseCode.USER_UNFOLLOWED, "Unfollowed successfully", null);
   }
 
   /**

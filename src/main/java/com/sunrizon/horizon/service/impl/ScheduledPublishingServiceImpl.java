@@ -44,7 +44,7 @@ public class ScheduledPublishingServiceImpl implements IScheduledPublishingServi
             }
             
             log.info("Published {} scheduled articles at {}", publishedCount, now);
-            return ResultResponse.success(ResponseCode.SUCCESS, publishedCount);
+            return ResultResponse.success(publishedCount);
         } catch (Exception e) {
             log.error("Error publishing scheduled articles", e);
             return ResultResponse.error(ResponseCode.INTERNAL_ERROR);
